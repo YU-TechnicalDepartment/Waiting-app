@@ -109,6 +109,12 @@
             background-color: var(--accent-hover);
         }
 
+        .btn:disabled {
+            background-color: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
         .btn.secondary {
             background-color: var(--bg-panel);
             color: var(--text-main);
@@ -117,6 +123,12 @@
 
         .btn.secondary:hover {
             background-color: #e2e8f0;
+        }
+
+        .btn.secondary:disabled {
+            background-color: #f1f5f9;
+            color: #cbd5e1;
+            border-color: #e2e8f0;
         }
 
         .btn.danger {
@@ -269,6 +281,13 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
         }
 
+        .form-input:disabled {
+            background-color: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: var(--border-soft);
+        }
+
         /* ディスプレイエリア */
         .monitor-block {
             background: var(--bg-panel);
@@ -415,6 +434,43 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
+        /* 📋 規約＆プライバシーポリシー同意エリア用スタイル */
+        .policy-agreement-box {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+            padding: 0 10px;
+        }
+        
+        .policy-agreement-box a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.15s ease;
+        }
+
+        .policy-agreement-box a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* 🌀 接続中ぐるぐる（スピナー）アニメーション */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* 🏛️ 共通カスタムダイアログ構造（オーバーレイ） */
         .custom-dialog-overlay {
             position: fixed;
@@ -498,6 +554,11 @@
                 <div class="panel-desc">本部に接続し、ディスプレイや現場操作リモコンとして連動します。</div>
             </div>
         </div>
+
+        <div class="policy-agreement-box">
+            上記のボタンを押して本システムを開始することで、<br>
+            <a href="terms.html" target="_blank">利用規約</a> および <a href="privacy.html" target="_blank">プライバシーポリシー</a> に同意したものとみなされます。
+        </div>
     </div>
 
     <div id="screen-client-setup" class="screen">
@@ -514,8 +575,11 @@
             <input type="text" id="input-pin" class="form-input" placeholder="0000" maxlength="4" style="text-align: center; font-weight: bold; letter-spacing: 0.2em;">
         </div>
 
-        <button class="btn" onclick="connectToAdmin()">接続を確立する</button>
-        <button class="btn secondary" onclick="backToGate()" style="margin-top: 12px;">戻る</button>
+        <button class="btn" id="btn-establish-connection" onclick="connectToAdmin()">
+            <span id="btn-connect-spinner" class="spinner" style="display: none;"></span>
+            <span id="btn-connect-text">接続を確立する</span>
+        </button>
+        <button class="btn secondary" id="btn-setup-back" onclick="backToGate()" style="margin-top: 12px;">戻る</button>
     </div>
 
     <div id="screen-admin" class="screen">
@@ -687,7 +751,7 @@
     let peer = null;
     let masterRole = null; 
     let correctPin = ""; 
-    let currentAdminId = ""; // 生成された本部IDの保持
+    let currentAdminId = ""; 
     let connectedClients = []; 
     let hostConnection = null; 
     let isAdminFullscreen = false;
@@ -710,18 +774,16 @@
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
-    // 🌟 ページ読み込み時にURLパラメータを解析して自動ルーティング＆ID埋め込みを行う
+    // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
-            // パラメータが存在する場合、自動で支端末設定画面に遷移し、IDを流し込む
             masterRole = 'client';
             navigate('screen-client-setup');
             const idInput = document.getElementById('input-peer-id');
             if (idInput) {
                 idInput.value = joinId;
-                // 即座にPIN入力欄にフォーカスを当てて、手入力を超スムーズに
                 setTimeout(() => {
                     const pinInput = document.getElementById('input-pin');
                     if (pinInput) pinInput.focus();
@@ -749,11 +811,10 @@
         document.getElementById('custom-dialog-overlay').classList.add('active');
     }
 
-    // 🌟 本部の接続用QRコードダイアログを表示
+    // 本部の接続用QRコードダイアログを表示
     function openQrDialog() {
         if (!currentAdminId) return;
         
-        // 現在のURLを取得し、末尾に「?join_id=xxx」を付与した自動接続用リンクを作成
         const baseUrl = window.location.origin + window.location.pathname;
         const scanUrl = `${baseUrl}?join_id=${currentAdminId}`;
 
@@ -769,7 +830,6 @@
         `;
         document.getElementById('custom-dialog-overlay').classList.add('active');
 
-        // ダイアログ内にQRコードをレンダリング
         new QRCode(document.getElementById("dom-qr-target"), {
             text: scanUrl,
             width: 180,
@@ -911,7 +971,6 @@
 
     function backToGate() {
         if(peer) peer.destroy();
-        // パラメータを消去して初期状態へリセット
         window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
     }
@@ -1056,7 +1115,7 @@
         location.reload();
     }
 
-    // 2. 支端末接続
+    // 🌟 2. 支端末接続（ぐるぐるローディング＆フォームロック完全実装版）
     function connectToAdmin() {
         const targetId = document.getElementById('input-peer-id').value.trim();
         const pinVal = document.getElementById('input-pin').value.trim();
@@ -1066,7 +1125,20 @@
             return;
         }
 
+        // 🌟 接続処理開始に伴い、UIをロックして「ぐるぐる」をオンにする
+        setConnectionLoadingState(true);
+
         peer = new Peer();
+        
+        // シグナリングサーバーへの接続がタイムアウト等で失敗した場合のセーフティガード
+        let timeoutGuard = setTimeout(() => {
+            if (masterRole === 'client' && document.getElementById('screen-client-setup').classList.contains('active')) {
+                openCustomAlert("タイムアウト", "接続要求がタイムアウトしました。IDが正しいか、または本部の電波状況を確認してください。");
+                setConnectionLoadingState(false);
+                if(peer) peer.destroy();
+            }
+        }, 8000); // 8秒応答がなければ自動解放
+
         peer.on('open', () => {
             const conn = peer.connect(targetId);
             hostConnection = conn;
@@ -1076,12 +1148,17 @@
             });
 
             conn.on('data', (data) => {
+                // 応答があったためガードを解除
+                clearTimeout(timeoutGuard);
+
                 if (data.type === 'AUTH_OK') {
+                    setConnectionLoadingState(false); // 解除
                     state = data.state;
                     applyStateToUI();
                     navigate('screen-client-choices');
                 }
                 if (data.type === 'AUTH_NG') {
+                    setConnectionLoadingState(false); // 解除
                     openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
                     peer.destroy();
                 }
@@ -1109,6 +1186,8 @@
             });
 
             conn.on('close', () => {
+                clearTimeout(timeoutGuard);
+                setConnectionLoadingState(false);
                 openCustomAlert("切断検知", "本部との接続が切断されました。");
                 setTimeout(() => {
                     window.history.replaceState({}, document.title, window.location.pathname);
@@ -1118,8 +1197,36 @@
         });
         
         peer.on('error', (err) => {
-            openCustomAlert("接続エラー", "本部が見つかりません。IDを確認してください。");
+            clearTimeout(timeoutGuard);
+            setConnectionLoadingState(false); // エラー時はUIロックを解除
+            openCustomAlert("接続エラー", "本部が見つかりません。IDを確認するか、通信環境をお確かめください。");
         });
+    }
+
+    // 🌟 ローディング表示と入力を切り替えるヘルパー関数
+    function setConnectionLoadingState(isLoading) {
+        const btnConnect = document.getElementById('btn-establish-connection');
+        const btnSpinner = document.getElementById('btn-connect-spinner');
+        const btnText = document.getElementById('btn-connect-text');
+        const btnBack = document.getElementById('btn-setup-back');
+        const inputId = document.getElementById('input-peer-id');
+        const inputPin = document.getElementById('input-pin');
+
+        if (isLoading) {
+            btnConnect.disabled = true;
+            btnBack.disabled = true;
+            inputId.disabled = true;
+            inputPin.disabled = true;
+            btnSpinner.style.display = "inline-block";
+            btnText.innerText = "接続中...";
+        } else {
+            btnConnect.disabled = false;
+            btnBack.disabled = false;
+            inputId.disabled = false;
+            inputPin.disabled = false;
+            btnSpinner.style.display = "none";
+            btnText.innerText = "接続を確立する";
+        }
     }
 
     function goClientMode(mode) {
