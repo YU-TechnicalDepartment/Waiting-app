@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>リアルタイム待ち時間管理システム</title>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
@@ -403,6 +404,17 @@
             color: var(--text-sub);
         }
 
+        /* QRコード表示用コンテナ */
+        .qr-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .qr-wrapper img {
+            border: 6px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
         /* 🏛️ 共通カスタムダイアログ構造（オーバーレイ） */
         .custom-dialog-overlay {
             position: fixed;
@@ -508,7 +520,11 @@
 
     <div id="screen-admin" class="screen">
         <div class="status-badge"><span class="dot"></span>本部システム稼働中</div>
-        <div style="float: right;">
+        <div style="float: right; display: flex; gap: 8px;">
+            <button class="btn secondary sm" onclick="openQrDialog()" style="gap: 4px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 6h2v2h-2zm-2 2h2v2h-2zm-2-2h2v2h-2zm2 4h2v2h-2zm2-2h2v2h-2zm-4 0h2v2h-2zm4-4h2v2h-2zm-2-2h2v2h-2zm-2 2h2v2h-2z"/></svg>
+                接続QR表示
+            </button>
             <button class="btn secondary sm" id="btn-toggle-preview" onclick="toggleAdminPreview()">客用大画面表示に切替</button>
         </div>
         <h1>本部コントロール</h1>
@@ -671,12 +687,13 @@
     let peer = null;
     let masterRole = null; 
     let correctPin = ""; 
+    let currentAdminId = ""; // 生成された本部IDの保持
     let connectedClients = []; 
     let hostConnection = null; 
     let isAdminFullscreen = false;
     let clientNameCounter = 0; 
     
-    // 🛡️ スパム・多重起動負荷対策システムコア
+    // スパム・多重起動負荷対策システム
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
@@ -690,14 +707,32 @@
         lockPassword: '1234'
     };
 
-    // 🏛️ ダイアログ＆確認用ロジックコンテキスト
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
-    // 🚨 誤操作による離脱・リロードの防止プロテクター
+    // 🌟 ページ読み込み時にURLパラメータを解析して自動ルーティング＆ID埋め込みを行う
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join_id');
+        if (joinId) {
+            // パラメータが存在する場合、自動で支端末設定画面に遷移し、IDを流し込む
+            masterRole = 'client';
+            navigate('screen-client-setup');
+            const idInput = document.getElementById('input-peer-id');
+            if (idInput) {
+                idInput.value = joinId;
+                // 即座にPIN入力欄にフォーカスを当てて、手入力を超スムーズに
+                setTimeout(() => {
+                    const pinInput = document.getElementById('input-pin');
+                    if (pinInput) pinInput.focus();
+                }, 400);
+            }
+        }
+    });
+
+    // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
-            // 解放処理を確実に走らせる
             unregisterActiveAdmin();
             e.preventDefault();
             e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
@@ -712,6 +747,37 @@
             <button class="btn" onclick="closeCustomDialog()">確認</button>
         `;
         document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    // 🌟 本部の接続用QRコードダイアログを表示
+    function openQrDialog() {
+        if (!currentAdminId) return;
+        
+        // 現在のURLを取得し、末尾に「?join_id=xxx」を付与した自動接続用リンクを作成
+        const baseUrl = window.location.origin + window.location.pathname;
+        const scanUrl = `${baseUrl}?join_id=${currentAdminId}`;
+
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">支端末 連動用QRコード</div>
+            <div class="dialog-message">別端末の「カメラアプリ」でこのQRコードをスキャンしてください。自動的にIDが入力された状態で接続画面が開きます。</div>
+            <div class="qr-wrapper" id="dom-qr-target"></div>
+            <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:18px; word-break:break-all; background:var(--bg-main); padding:8px; border-radius:6px;">
+                PIN: <strong style="color:var(--accent-blue); font-size:0.9rem;">${correctPin}</strong>
+            </div>
+            <button class="btn secondary" onclick="closeCustomDialog()">閉じる</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+
+        // ダイアログ内にQRコードをレンダリング
+        new QRCode(document.getElementById("dom-qr-target"), {
+            text: scanUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#1e293b",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
     }
 
     function openCustomConfirm(actionType, extraData = null) {
@@ -845,10 +911,11 @@
 
     function backToGate() {
         if(peer) peer.destroy();
-        navigate('screen-gate');
+        // パラメータを消去して初期状態へリセット
+        window.history.replaceState({}, document.title, window.location.pathname);
+        location.reload();
     }
 
-    // 🛡️ 同一ブラウザ同時「本部」数チェックロジック
     function getActiveAdminCount() {
         cleanExpiredAdmins();
         let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
@@ -870,7 +937,6 @@
 
     function cleanExpiredAdmins() {
         let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
-        // 1分以上応答の形跡がないゴミデータを自動削除
         const now = Date.now();
         list = list.filter(item => (now - item.timestamp) < 60000);
         localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
@@ -878,7 +944,6 @@
 
     antiSpamChannel.onmessage = (e) => {
         if (e.data.type === 'PING' && masterRole === 'admin') {
-            // 生存確認に応答してタイムスタンプ更新
             let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
             let mine = list.find(item => item.instanceId === currentInstanceId);
             if (mine) mine.timestamp = Date.now();
@@ -886,12 +951,10 @@
         }
     };
 
-    // 10秒毎にハートビートをクリーン
     setInterval(cleanExpiredAdmins, 10000);
 
     function selectRole(role) {
         if (role === 'admin') {
-            // 🛑 スパム＆同時制限バリデータ発火
             if (getActiveAdminCount() >= 3) {
                 openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
                 return;
@@ -908,13 +971,13 @@
     // 1. 本部ホスト起動
     function initAdminPeer() {
         navigate('screen-admin');
-        const customId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
+        currentAdminId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
         correctPin = String(Math.floor(1000 + Math.random() * 9000));
 
         document.getElementById('admin-info').innerHTML = 
-            `接続ID: <strong style="color:var(--text-main);">${customId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
+            `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
 
-        peer = new Peer(customId);
+        peer = new Peer(currentAdminId);
 
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
@@ -968,7 +1031,6 @@
         listDiv.innerHTML = html;
     }
 
-    // ワンクッション後に実行されるキックロジック
     function executeKickClient(peerId) {
         const conn = connectedClients.find(c => c.peer === peerId);
         if(conn) {
@@ -981,7 +1043,6 @@
         }
     }
 
-    // 🛑 本部強制クローズ処理の実効化
     function executeCloseAdminMaster() {
         connectedClients.forEach(conn => {
             if (conn.open) {
@@ -991,6 +1052,7 @@
         });
         unregisterActiveAdmin();
         if(peer) peer.destroy();
+        window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
     }
 
@@ -1032,18 +1094,26 @@
                 }
                 if (data.type === 'KICKED_BY_ADMIN') {
                     openCustomAlert("切断のお知らせ", "本部管理者によって接続が切り離されました。");
-                    setTimeout(() => location.reload(), 3000);
+                    setTimeout(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        location.reload();
+                    }, 3000);
                 }
-                // 本部が完全にクローズしたときの連動処理
                 if (data.type === 'ADMIN_CLOSED_FORCED') {
                     openCustomAlert("システム終了", "本部システムが終了したため、通信を安全に停止しました。");
-                    setTimeout(() => location.reload(), 3000);
+                    setTimeout(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        location.reload();
+                    }, 3000);
                 }
             });
 
             conn.on('close', () => {
                 openCustomAlert("切断検知", "本部との接続が切断されました。");
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    location.reload();
+                }, 1500);
             });
         });
         
@@ -1179,6 +1249,7 @@
         const fullscreenAction = document.getElementById('box-admin-fullscreen-action');
         const listSection = document.getElementById('admin-client-list-section');
         const closeAdminBtn = document.querySelector('#screen-admin > .btn.danger');
+        const qrShowBtn = document.querySelector('button[onclick="openQrDialog()"]');
 
         if (forceClose) {
             isAdminFullscreen = true;
@@ -1194,6 +1265,7 @@
             directCtrl.style.display = "none";
             listSection.style.display = "none";
             if(closeAdminBtn) closeAdminBtn.style.display = "none";
+            if(qrShowBtn) qrShowBtn.style.display = "none";
             btn.style.display = "none";
             monitor.style.padding = "80px 20px";
             monitor.style.background = "#ffffff";
@@ -1206,6 +1278,7 @@
             settings.style.display = "block";
             listSection.style.display = "block";
             if(closeAdminBtn) closeAdminBtn.style.display = "block";
+            if(qrShowBtn) qrShowBtn.style.display = "block";
             btn.style.display = "block";
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.6rem";
             monitor.style.padding = "44px 20px";
