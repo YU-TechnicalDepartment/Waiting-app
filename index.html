@@ -8,8 +8,7 @@
     <style>
         :root {
             --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
-            --card-bg: rgba(255, 255, 255, 0.85); /* 透明感のある白 */
-            --card-border: rgba(255, 255, 255, 0.6);
+            --bg-surface: #ffffff;       /* じか設置するメインの白背景 */
             --text-main: #1e293b;        /* 視認性の高い墨色 */
             --text-sub: #64748b;         /* 上品なグレー */
             --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
@@ -17,6 +16,7 @@
             --success-green: #10b981;
             --border-soft: rgba(0, 0, 0, 0.06);
             --toggle-bg: #e2e8f0;
+            --overlay-bg: rgba(15, 23, 42, 0.3); /* ダイアログ用の深みのある半透明ブラック */
         }
 
         * {
@@ -32,28 +32,25 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            align-items: stretch;
             -webkit-font-smoothing: antialiased;
         }
 
+        /* カード式をやめ、画面にじか設置されて吸い付くような幅広のコンテナ */
         .app-container {
             width: 100%;
-            max-width: 540px;
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 40px 32px;
-            box-shadow: 0 8px 32px rgba(148, 163, 184, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+            max-width: 640px;
+            background: var(--bg-surface);
+            padding: 50px 40px;
+            box-shadow: 0 4px 30px rgba(148, 163, 184, 0.05);
+            display: flex;
+            flex-direction: column;
             position: relative;
             transition: max-width 0.3s ease;
         }
 
-        /* 本部が大画面客用表示モードになった時は横幅を広げる */
         .app-container.fullscreen-preview {
-            max-width: 800px;
+            max-width: 900px;
         }
 
         .screen {
@@ -65,7 +62,7 @@
         }
 
         h1 {
-            font-size: 1.35rem;
+            font-size: 1.4rem;
             font-weight: 700;
             margin-bottom: 8px;
             letter-spacing: -0.01em;
@@ -74,14 +71,14 @@
         .description {
             font-size: 0.85rem;
             color: var(--text-sub);
-            margin-bottom: 24px;
-            line-height: 1.5;
+            margin-bottom: 28px;
+            line-height: 1.6;
         }
 
-        /* アイコン付きの洗練されたボタン */
+        /* アイコン付きボタン */
         .btn {
             width: 100%;
-            padding: 13px 20px;
+            padding: 14px 20px;
             background-color: var(--accent-blue);
             color: #fff;
             border: none;
@@ -94,7 +91,6 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
         }
 
         .btn svg {
@@ -108,47 +104,45 @@
         }
 
         .btn.secondary {
-            background-color: #fff;
+            background-color: var(--bg-main);
             color: var(--text-main);
             border: 1px solid var(--border-soft);
-            box-shadow: none;
         }
 
         .btn.secondary:hover {
-            background-color: var(--bg-main);
-            border-color: rgba(0, 0, 0, 0.12);
+            background-color: #e2e8f0;
         }
 
         .btn.sm {
-            padding: 8px 14px;
+            padding: 9px 16px;
             font-size: 0.85rem;
             border-radius: 8px;
         }
 
         /* パネル選択 */
         .select-panel {
-            background: rgba(255, 255, 255, 0.6);
+            background: var(--bg-main);
             border: 1px solid var(--border-soft);
             border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 14px;
+            padding: 22px;
+            margin-bottom: 16px;
             text-align: left;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 18px;
         }
 
         .select-panel:hover {
-            background: #fff;
+            background: #ffffff;
             border-color: var(--accent-blue);
-            box-shadow: 0 4px 16px rgba(148, 163, 184, 0.08);
+            box-shadow: 0 4px 16px rgba(148, 163, 184, 0.06);
         }
 
         .panel-icon {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             background: rgba(59, 130, 246, 0.08);
             color: var(--accent-blue);
             border-radius: 10px;
@@ -171,7 +165,7 @@
         .panel-title {
             font-size: 0.95rem;
             font-weight: 700;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
         .panel-desc {
@@ -179,20 +173,20 @@
             color: var(--text-sub);
         }
 
-        /* 設定スイッチエリア */
+        /* 設定エリア */
         .settings-box {
-            background: rgba(0, 0, 0, 0.02);
+            background: var(--bg-main);
             border: 1px solid var(--border-soft);
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
+            padding: 18px;
+            margin-bottom: 24px;
         }
 
         .setting-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .setting-row:last-child {
@@ -204,7 +198,6 @@
             font-weight: 600;
         }
 
-        /* スタイリッシュなトグル/セグメントスイッチ */
         .segmented-control {
             display: flex;
             background: var(--toggle-bg);
@@ -213,7 +206,7 @@
         }
 
         .segment-btn {
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 0.8rem;
             font-weight: 600;
             border: none;
@@ -227,12 +220,12 @@
         .segment-btn.active {
             background: #fff;
             color: var(--text-main);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
 
         /* フォーム */
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 18px;
             text-align: left;
         }
 
@@ -246,44 +239,50 @@
 
         .form-input {
             width: 100%;
-            padding: 11px 14px;
-            background: #fff;
+            padding: 12px 14px;
+            background: var(--bg-main);
             border: 1px solid var(--border-soft);
             border-radius: 10px;
             font-size: 0.95rem;
             color: var(--text-main);
             outline: none;
+            transition: all 0.2s;
         }
 
-        /* 視認性最優先の大型ディスプレイエリア */
+        .form-input:focus {
+            background: #fff;
+            border-color: var(--accent-blue);
+        }
+
+        /* ディスプレイエリア */
         .monitor-block {
-            background: rgba(255, 255, 255, 0.6);
+            background: var(--bg-main);
             border: 1px solid var(--border-soft);
             border-radius: 16px;
-            padding: 36px 20px;
-            margin: 20px 0;
+            padding: 40px 20px;
+            margin: 24px 0;
             text-align: center;
             position: relative;
         }
 
         .huge-time {
-            font-size: 4.2rem;
+            font-size: 4.5rem;
             font-weight: 800;
             color: var(--text-main);
             line-height: 1;
         }
 
-        /* 客用ディスプレイモードでは文字を完全に黒にする */
+        /* ディスプレイモード時は完全な漆黒にする */
         .display-mode-text {
             color: #000000 !important;
         }
 
-        /* 「約」と「分」のサイズを完全に統一して小さく控えめにする */
+        /* 「約」と「分」のサイズを同一にし、控えめにする */
         .side-text {
             font-size: 1.5rem;
             font-weight: 500;
             color: var(--text-sub);
-            margin: 0 6px;
+            margin: 0 8px;
             vertical-align: middle;
         }
 
@@ -293,22 +292,22 @@
         }
 
         .huge-sub {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             color: var(--text-sub);
-            margin-top: 14px;
+            margin-top: 16px;
         }
 
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
-            background: #fff;
+            padding: 5px 12px;
+            background: var(--bg-main);
             border: 1px solid var(--border-soft);
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 700;
-            margin-bottom: 16px;
+            margin-bottom: 18px;
         }
 
         .dot {
@@ -332,22 +331,72 @@
         }
 
         .lock-text {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: var(--text-sub);
             text-align: center;
-            margin-top: 12px;
-            opacity: 0.5;
+            margin-top: 16px;
+            letter-spacing: 0.05em;
         }
 
-        /* 画面ロック解除用のシークレットエリア */
-        .secret-area {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 48px;
-            height: 48px;
-            cursor: default;
-            z-index: 99;
+        /* 🔒 隠しをやめ、スマートに見せる「解除ボタン」エリア */
+        .action-bar-bottom {
+            margin-top: 24px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 🏛️ 高級感を重視したカスタムモダンダイアログ構造 */
+        .custom-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .custom-dialog-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .custom-dialog-box {
+            background: #ffffff;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+            text-align: center;
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .custom-dialog-overlay.active .custom-dialog-box {
+            transform: scale(1);
+        }
+
+        .dialog-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .dialog-message {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 20px;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -398,7 +447,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             接続を確立する
         </button>
-        <button class="btn secondary" onclick="backToGate()" style="margin-top: 10px;">戻る</button>
+        <button class="btn secondary" onclick="backToGate()" style="margin-top: 12px;">戻る</button>
     </div>
 
     <div id="screen-admin" class="screen">
@@ -431,18 +480,22 @@
                     <button class="segment-btn" id="ctrl-direct" onclick="changeStateSetting('controlMode', 'direct')">分単位を直接加減</button>
                 </div>
             </div>
-            <div class="setting-row" style="margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 12px;">
+            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
                 <div class="setting-label">ロック解除パスワード</div>
                 <input type="text" id="admin-lock-password" class="form-input" value="1234" style="width: 140px; padding: 6px 10px; text-align: center;" onchange="updateLockPassword()">
             </div>
         </div>
 
         <div class="monitor-block" id="admin-monitor">
-            <div style="font-size: 0.85rem; color: var(--text-sub);" id="lbl-admin-title">現在の全体待ち時間</div>
+            <div style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 4px;" id="lbl-admin-title">現在の全体待ち時間</div>
             <div class="huge-time" id="dom-admin-time-box">
                 <span class="side-text" id="txt-about-admin">約</span><span id="admin-time">0</span><span class="side-text">分</span>
             </div>
             <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組の行列</div>
+            
+            <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none;">
+                <button class="btn secondary sm" onclick="openCustomPrompt('admin-control')">管理者画面に戻る</button>
+            </div>
         </div>
 
         <div id="panel-pace-control">
@@ -494,20 +547,22 @@
             </div>
         </div>
         
-        <button class="btn secondary" onclick="exitClientSession()" style="margin-top: 20px;">切断して終了</button>
+        <button class="btn secondary" onclick="openCustomConfirm('reload')" style="margin-top: 24px;">切断して終了</button>
     </div>
 
-    <div id="screen-display" class="screen" style="position: relative;">
-        <div class="monitor-block" style="padding: 60px 20px; background: #fff; margin-bottom: 0;">
-            <div style="font-size: 0.9rem; color: var(--text-sub); letter-spacing: 0.05em;">現在の待ち時間</div>
+    <div id="screen-display" class="screen">
+        <div class="monitor-block" style="padding: 60px 20px; background: var(--bg-main); margin-bottom: 0;">
+            <div style="font-size: 0.9rem; color: var(--text-sub); letter-spacing: 0.05em; margin-bottom: 4px;">現在の待ち時間</div>
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
             </div>
             <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">およそ <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
         </div>
-        <p class="lock-text">⚠️ 表示ロック中</p>
+        <p class="lock-text">表示ロック中</p>
         
-        <div class="secret-area" onclick="attemptUnlock('choices')"></div>
+        <div class="action-bar-bottom">
+            <button class="btn secondary sm" onclick="openCustomPrompt('choices')">モード変更</button>
+        </div>
     </div>
 
     <div id="screen-staff" class="screen">
@@ -543,6 +598,11 @@
 
 </div>
 
+<div id="custom-dialog-overlay" class="custom-dialog-overlay">
+    <div class="custom-dialog-box" id="custom-dialog-box">
+        </div>
+</div>
+
 <script>
     let peer = null;
     let masterRole = null; 
@@ -551,7 +611,7 @@
     let hostConnection = null; 
     let isAdminFullscreen = false;
 
-    // 設定とデータの一元管理（丸ごと同期）
+    // 状態の一元管理
     let state = {
         teams: 0,
         pace: 5,
@@ -559,9 +619,86 @@
         showAbout: true,      
         showTeams: true,      
         controlMode: 'pace',
-        lockPassword: '1234'  // デフォルト解除パスワード
+        lockPassword: '1234'
     };
 
+    // 🏛️ ブラウザ標準依存を完全脱却する、独自カスタムダイアログの制御コアロジック
+    let currentDialogContext = null;
+
+    function openCustomAlert(title, message) {
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">${title}</div>
+            <div class="dialog-message">${message}</div>
+            <button class="btn" onclick="closeCustomDialog()">確認</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    function openCustomConfirm(actionType) {
+        currentDialogContext = actionType;
+        const box = document.getElementById('custom-dialog-box');
+        
+        let title = "通信の切断";
+        let message = "本部との通信セッションを切断し、最初の選択画面に戻りますか？";
+        
+        box.innerHTML = `
+            <div class="dialog-title">${title}</div>
+            <div class="dialog-message">${message}</div>
+            <div class="flex-row">
+                <button class="btn" onclick="handleCustomConfirmResult(true)">切断する</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    function handleCustomConfirmResult(isYes) {
+        closeCustomDialog();
+        if (isYes && currentDialogContext === 'reload') {
+            location.reload();
+        }
+    }
+
+    function openCustomPrompt(targetAction) {
+        currentDialogContext = targetAction;
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">管理ロックの解除</div>
+            <div class="dialog-message">設定されたパスワードを入力してください。</div>
+            <div class="form-group">
+                <input type="password" id="dialog-prompt-input" class="form-input" style="text-align:center; font-size:1.2rem; letter-spacing:0.1em;" autofocus autocomplete="off">
+            </div>
+            <div class="flex-row">
+                <button class="btn" onclick="handleCustomPromptResult()">解除</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+        setTimeout(() => document.getElementById('dialog-prompt-input').focus(), 50);
+    }
+
+    function handleCustomPromptResult() {
+        const inputVal = document.getElementById('dialog-prompt-input').value.trim();
+        if (inputVal === state.lockPassword) {
+            closeCustomDialog();
+            if (currentDialogContext === 'choices') {
+                returnToChoices();
+            } else if (currentDialogContext === 'admin-control') {
+                toggleAdminPreview(true);
+            }
+        } else {
+            // エラー時も独自のアラートを重ねる
+            document.getElementById('dialog-prompt-input').value = "";
+            openCustomAlert("認証エラー", "パスワードが正しくありません。");
+        }
+    }
+
+    function closeCustomDialog() {
+        document.getElementById('custom-dialog-overlay').classList.remove('active');
+    }
+
+    // 画面遷移ロジック
     function navigate(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
@@ -616,13 +753,13 @@
         });
     }
 
-    // 2. 支端末ホスト接続
+    // 2. 支端末接続
     function connectToAdmin() {
         const targetId = document.getElementById('input-peer-id').value.trim();
         const pinVal = document.getElementById('input-pin').value.trim();
 
         if (!targetId || !pinVal) {
-            alert("接続用IDとPINを入力してください。");
+            openCustomAlert("入力エラー", "接続用IDとPINを両方入力してください。");
             return;
         }
 
@@ -642,7 +779,7 @@
                     navigate('screen-client-choices');
                 }
                 if (data.type === 'AUTH_NG') {
-                    alert("認証PINコードが一致しません。");
+                    openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
                     peer.destroy();
                 }
                 if (data.type === 'BROADCAST_SYNC') {
@@ -652,9 +789,13 @@
             });
 
             conn.on('close', () => {
-                alert("本部との接続が切断されました。");
-                location.reload();
+                openCustomAlert("切断検知", "本部との接続が切断されました。");
+                setTimeout(() => location.reload(), 1500);
             });
+        });
+        
+        peer.on('error', (err) => {
+            openCustomAlert("接続エラー", "本部が見つかりません。IDを確認してください。");
         });
     }
 
@@ -667,24 +808,7 @@
         navigate('screen-client-choices');
     }
 
-    // 🔒 パスワード入力によるロック解除処理
-    function attemptUnlock(targetAction) {
-        const input = prompt("管理ロック解除パスワードを入力してください：");
-        if (input === null) return; // キャンセル
-
-        if (input === state.lockPassword) {
-            if (targetAction === 'choices') {
-                returnToChoices();
-            } else if (targetAction === 'admin-control') {
-                // 本部画面のフルスクリーン解除
-                toggleAdminPreview(true);
-            }
-        } else {
-            alert("パスワードが正しくありません。ロックを解除できません。");
-        }
-    }
-
-    // 3. 本部動的設定変更
+    // 3. 各種設定更新
     function changeStateSetting(key, value) {
         state[key] = value;
         
@@ -715,13 +839,6 @@
         if (state.teams < 0) state.teams = 0;
         recalculateTotal();
     }
-
-    document.body.addEventListener('click', function(e) {
-        // 特殊なマイナス加算時のタイポセーフティ用
-        if (e.target && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('-1------------10')) {
-            adjustDirectMinutes(-10);
-        }
-    });
 
     function adjustDirectMinutes(amount) {
         state.totalTime += amount;
@@ -763,7 +880,7 @@
         }
     }
 
-    // 5. UI完全書き換えロジック
+    // UIデータ反映
     function applyStateToUI() {
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
@@ -775,25 +892,21 @@
             if (el) el.innerText = renderNumbers[id];
         }
 
-        // パスワード入力同期
         const pwdInput = document.getElementById('admin-lock-password');
         if (pwdInput && masterRole !== 'admin') {
             pwdInput.value = state.lockPassword;
         }
 
-        // 「約」の出し分け
         const aboutDisplay = state.showAbout ? "inline" : "none";
         document.getElementById('txt-about-admin').style.display = aboutDisplay;
         document.getElementById('txt-about-view').style.display = aboutDisplay;
         document.getElementById('txt-about-staff').style.display = aboutDisplay;
 
-        // 「何組待ち」の出し分け
         const teamsDisplay = state.showTeams ? "block" : "none";
         document.getElementById('box-admin-teams').style.display = teamsDisplay;
         document.getElementById('box-view-teams').style.display = teamsDisplay;
         document.getElementById('box-staff-teams').style.display = teamsDisplay;
 
-        // 操作パネル出し分け
         const isPace = (state.controlMode === 'pace');
         document.getElementById('panel-pace-control').style.display = isPace ? "block" : "none";
         document.getElementById('panel-direct-control').style.display = isPace ? "none" : "block";
@@ -801,7 +914,7 @@
         document.getElementById('client-direct-box').style.display = isPace ? "none" : "block";
     }
 
-    // 6. 本部：客用表示フルスクリーントグル機能
+    // 4. 本部：客用表示フルスクリーン
     function toggleAdminPreview(forceClose = false) {
         const container = document.getElementById('main-container');
         const info = document.getElementById('admin-info');
@@ -810,8 +923,8 @@
         const directCtrl = document.getElementById('panel-direct-control');
         const btn = document.getElementById('btn-toggle-preview');
         const monitor = document.getElementById('admin-monitor');
-        const lblTitle = document.getElementById('lbl-admin-title');
         const adminTimeBox = document.getElementById('dom-admin-time-box');
+        const fullscreenAction = document.getElementById('box-admin-fullscreen-action');
 
         if (forceClose) {
             isAdminFullscreen = true;
@@ -820,48 +933,29 @@
         isAdminFullscreen = !isAdminFullscreen;
 
         if (isAdminFullscreen) {
-            // 客用フルスクリーン表示
             container.classList.add('fullscreen-preview');
             info.style.display = "none";
             settings.style.display = "none";
             paceCtrl.style.display = "none";
             directCtrl.style.display = "none";
-            monitor.style.padding = "70px 20px";
-            monitor.style.background = "#fff";
+            btn.style.display = "none";
+            monitor.style.padding = "80px 20px";
+            monitor.style.background = "#ffffff";
             adminTimeBox.classList.add('display-mode-text');
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "6rem";
-            btn.innerText = "管理者画面に戻る";
-            
-            // フルスクリーン時の解除トリガーを追加（誤操作防止パスワードロック用）
-            let secret = document.getElementById('admin-fullscreen-secret');
-            if(!secret) {
-                secret = document.createElement('div');
-                secret.id = 'admin-fullscreen-secret';
-                secret.className = 'secret-area';
-                secret.onclick = () => attemptUnlock('admin-control');
-                monitor.appendChild(secret);
-            }
+            fullscreenAction.style.display = "flex";
         } else {
-            // 管理画面に戻す
             container.classList.remove('fullscreen-preview');
             info.style.display = "block";
             settings.style.display = "block";
-            document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.2rem";
-            monitor.style.padding = "36px 20px";
-            monitor.style.background = "rgba(255, 255, 255, 0.5)";
+            btn.style.display = "block";
+            document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.5rem";
+            monitor.style.padding = "40px 20px";
+            monitor.style.background = "var(--bg-main)";
             adminTimeBox.classList.remove('display-mode-text');
+            fullscreenAction.style.display = "none";
             btn.innerText = "客用大画面表示に切替";
-            
-            const secret = document.getElementById('admin-fullscreen-secret');
-            if(secret) secret.remove();
-            
             applyStateToUI();
-        }
-    }
-
-    function exitClientSession() {
-        if (confirm("本部との通信セッションを切断し、初期状態に戻りますか？")) {
-            location.reload();
         }
     }
 </script>
