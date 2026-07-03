@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - リアルタイム待ち時間管理システム</title>
+    <style>
+        :root {
+            --bg-main: #f0f4f8;          /* index.html / terms.htmlと同じ薄いブルーグレー */
+            --bg-panel: #ffffff;         /* 要素を際立たせる白背景 */
+            --text-main: #1e293b;        /* 視認性の高い墨色 */
+            --text-sub: #64748b;         /* 上品なグレー */
+            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
+            --accent-hover: #2563eb;
+            --border-soft: rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        /* 条ごとのボックス（terms.htmlと完全統一） */
+        .policy-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .policy-box:hover {
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.06);
+        }
+
+        .policy-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 10px;
+        }
+
+        .policy-content {
+            font-size: 0.88rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+        }
+
+        .policy-content ul, .policy-content ol {
+            padding-left: 20px;
+            margin-top: 6px;
+        }
+
+        .policy-content li {
+            margin-bottom: 4px;
+        }
+
+        .footer-actions {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 32px;
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .btn:hover {
+            background-color: #e2e8f0;
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .date-info {
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 32px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>プライバシーポリシー</h1>
+        <p class="subtitle">リアルタイム待ち時間管理システム（以下、「本システム」といいます）における、利用者情報の取り扱い方針を定めています。</p>
+    </header>
+
+    <div class="policy-box">
+        <div class="policy-title">第1条（基本的なデータ方針）</div>
+        <div class="policy-content">
+            本システムは、ユーザーのプライバシー保護を最優先に考え設計されています。待ち時間管理の運用にあたり、ユーザーの氏名、メールアドレス、電話番号などの個人を特定できる情報は一切要求せず、収集も行いません。
+        </div>
+    </div>
+
+    <div class="policy-box">
+        <div class="policy-title">第2条（ローカルストレージ及び一時データの利用）</div>
+        <div class="policy-content">
+            本システムは、アプリの正常かつ安全な動作をサポートするため、お使いのブラウザの「ローカルストレージ（LocalStorage）」および一時メモリを利用して、以下の情報のみを一時的に端末内に保存します。
+            <ul>
+                <li><strong>管理ロック解除パスワード：</strong> 本部画面の不正操作を防ぐロック機能の認証用。</li>
+                <li><strong>アクティブ本部管理データ：</strong> スパム負荷・多重起動（同一端末での大量の同時立ち上げ）を防ぎ、システムを守るための判定用識別番号（インスタンスID等）。</li>
+            </ul>
+            これらのデータは外部のサーバーへ送信されることはなく、ユーザーのブラウザ内（ローカル環境）でのみ安全に処理されます。
+        </div>
+    </div>
+
+    <div class="policy-box">
+        <div class="policy-title">第3条（P2P直結通信におけるデータフロー）</div>
+        <div class="policy-content">
+            1. 本システムは、WebRTC技術（PeerJS）を利用した端末間直結通信（P2P）により動作します。設定された待ち時間や組数などの運用データは、本部端末と接続された支端末の間で「直接」送受信されます。<br>
+            2. 通信を仲介するシグナリングサーバーは、端末同士をマッチング（接続確立）させる役割のみを担っており、やり取りされる待ち時間等のイベント運用データがそのサーバーに蓄積または常時記録されることはありません。
+        </div>
+    </div>
+
+    <div class="policy-box">
+        <div class="policy-title">第4条（安全管理措置）</div>
+        <div class="policy-content">
+            本システムは外部データベースを一切保有しないため、サーバーハッキング等による大規模なイベント運用データやパスワードの外部流出リスクが極めて低い構造となっています。各端末を接続する際の認証PINコードおよびロックパスワードの管理は、各ユーザー（イベント運営本部）の責任において行ってください。
+        </div>
+    </div>
+
+    <div class="policy-box">
+        <div class="policy-title">第5条（ポリシーの変更）</div>
+        <div class="policy-content">
+            本システムは、機能追加や通信仕様の変更等に伴い、本プライバシーポリシーを随時見選ぶことがあります。変更後のポリシーは本ページに掲載された時点より効力を生じるものとします。
+        </div>
+    </div>
+
+    <div class="footer-actions">
+        <a href="#" onclick="window.close(); return false;" class="btn">このページを閉じる</a>
+    </div>
+
+    <div class="date-info">
+        2026年7月3日 改定・適用
+    </div>
+</div>
+
+</body>
+</html>
