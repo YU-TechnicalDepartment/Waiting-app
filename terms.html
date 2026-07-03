@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>利用規約 - リアルタイム待ち時間管理システム</title>
+    <style>
+        :root {
+            --bg-main: #f0f4f8;          /* index.htmlと同じ爽やかな薄いブルーグレー */
+            --bg-panel: #ffffff;         /* 要素を際立たせる白背景 */
+            --text-main: #1e293b;        /* 視認性の高い墨色 */
+            --text-sub: #64748b;         /* 上品なグレー */
+            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
+            --accent-hover: #2563eb;
+            --border-soft: rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--bg-main); /* index.htmlのシームレス感に合わせる */
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        /* 📋 条ごとのボックス（インラインアクセント付きモダンパネル） */
+        .term-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .term-box:hover {
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.06);
+        }
+
+        .term-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 10px;
+        }
+
+        .term-content {
+            font-size: 0.88rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+        }
+
+        .term-content ol, .term-content ul {
+            padding-left: 20px;
+            margin-top: 6px;
+        }
+
+        .term-content li {
+            margin-bottom: 4px;
+        }
+
+        .term-content li:last-child {
+            margin-bottom: 0;
+        }
+
+        .footer-actions {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 32px;
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .btn:hover {
+            background-color: #e2e8f0;
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .date-info {
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 32px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>利用規約</h1>
+        <p class="subtitle">リアルタイム待ち時間管理システム（以下、「本システム」といいます）をご利用いただく際の諸条件を定めています。</p>
+    </header>
+
+    <div class="term-box">
+        <div class="term-title">第1条（規約の適用）</div>
+        <div class="term-content">
+            本利用規約は、本システムの利用者（以下、「ユーザー」といいます）と、本システムの開発・運営者（以下、「運営者」といいます）との間の本システムの利用に関わる一切の関係に適用されます。ユーザーは、初期画面にて本システムの開始操作を行うことで、本規約のすべての内容に同意したものとみなされます。
+        </div>
+    </div>
+
+    <div class="term-box">
+        <div class="term-title">第2条（本システムの概要と運用）</div>
+        <div class="term-content">
+            1. 本システムは、WebRTC通信技術を用いて、本部端末と支端末間でリアルタイムに待ち時間情報を同期・一括管理するアプリケーションです。<br>
+            2. 本システムはサーバーを介さない端末間直結通信（PeerJS）を利用して動作する性質上、通信状況や端末のブラウザ仕様、OSの省電力モード等により、同期の遅延や切断が発生する場合があります。
+        </div>
+    </div>
+
+    <div class="term-box">
+        <div class="term-title">第3条（禁止事項）</div>
+        <div class="term-content">
+            ユーザーは、本システムの利用にあたり、以下の行為を行ってはなりません。
+            <ol>
+                <li>本システムのネットワーク、またはシステムに過度な負荷をかける行為</li>
+                <li>リバースエンジニアリング、逆コンパイル、逆アセンブル等による、本システムの解析、改変行為（ただし、オープンソースとして認められた範囲を除く）</li>
+                <li>不正なスクリプト等を用いて、不正な通信接続を大量に発生させるスパム行為</li>
+                <li>他者のイベント運営、または本システムの正常な提供を妨害する行為</li>
+                <li>その他、運営者が不適切と判断する行為</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="term-box">
+        <div class="term-title">第4条（本システムの停止・変更）</div>
+        <div class="term-content">
+            運営者は、以下のいずれかに該当する場合、ユーザーに事前に通知することなく、本システムの全部または一部の提供を停止、または内容の変更を行うことができるものとします。
+            <ul>
+                <li>外部通信ライブラリ（PeerJSのシグナリングサーバー等）のメンテナンス、または障害が発生した場合</li>
+                <li>天災地変、停電、通信回線の事故等の不可抗力により、本システムの運用ができなくなった場合</li>
+                <li>その他、運営者が停止または変更が必要であると判断した場合</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="term-box">
+        <div class="term-title">第5条（免責事項・責任の制限）</div>
+        <div class="term-content">
+            1. 運営者は、本システムに事実上または法律上の瑕疵（安全性、信頼性、正確性、完全性、有効性、特定の目的への適合性、セキュリティなどに関する欠陥、エラーやバグ、権利侵害などを含みます）がないことを明示的にも黙示的にも保証しておりません。<br>
+            2. 運営者は、本システムの利用、または通信不通やバグなどの不具合に起因してユーザーまたは第三者に生じたあらゆる損害（イベントの混雑トラブル、案内ミス、金銭的損失、機会損失、データ破損等を含む）について、<strong>一切の責任を負いません。</strong>すべてユーザー自身の責任においてご利用ください。
+        </div>
+    </div>
+
+    <div class="term-box">
+        <div class="term-title">第6条（規約の変更）</div>
+        <div class="term-content">
+            運営者は、必要と判断した場合には、ユーザーに通知することなくいつでも本規約を変更することができるものとします。本規約の変更後、ユーザーが本システムを利用した場合には、ユーザーは変更後の規約に同意したものとみなされます。
+        </div>
+    </div>
+
+    <div class="footer-actions">
+        <a href="#" onclick="window.close(); return false;" class="btn">このページを閉じる</a>
+    </div>
+
+    <div class="date-info">
+        2026年7月3日 改定・適用
+    </div>
+</div>
+
+</body>
+</html>
