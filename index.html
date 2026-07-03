@@ -286,12 +286,10 @@
             line-height: 1;
         }
 
-        /* 客用ディスプレイモード時は完全な漆黒（#000000） */
         .display-mode-text {
             color: #000000 !important;
         }
 
-        /* 「約」と「分」のサイズ・太さを統一し、控えめにする */
         .side-text {
             font-size: 1.5rem;
             font-weight: 500;
@@ -358,7 +356,7 @@
             justify-content: flex-end;
         }
 
-        /* 🖥️ 高度機能：本部管理用クライアント接続リストUI */
+        /* クライアント接続リストUI */
         .client-list-container {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -585,6 +583,8 @@
                 <div class="empty-client-msg">現在接続されている支端末はありません。</div>
             </div>
         </div>
+
+        <button class="btn danger" onclick="openCustomConfirm('close-admin')" style="margin-top: 24px;">本部システムを強制終了</button>
     </div>
 
     <div id="screen-client-choices" class="screen">
@@ -671,12 +671,15 @@
     let peer = null;
     let masterRole = null; 
     let correctPin = ""; 
-    let connectedClients = []; // 本部用：接続元Connectionの配列
-    let hostConnection = null; // 支端末用：本部へのConnection
+    let connectedClients = []; 
+    let hostConnection = null; 
     let isAdminFullscreen = false;
-    let clientNameCounter = 0; // 端末命名用カウンタ
+    let clientNameCounter = 0; 
+    
+    // 🛡️ スパム・多重起動負荷対策システムコア
+    const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
+    const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
-    // 状態データ
     let state = {
         teams: 0,
         pace: 5,
@@ -687,9 +690,19 @@
         lockPassword: '1234'
     };
 
-    // 🏛️ ダイアログロジック
+    // 🏛️ ダイアログ＆確認用ロジックコンテキスト
     let currentDialogContext = null;
     let currentTargetPeerId = null;
+
+    // 🚨 誤操作による離脱・リロードの防止プロテクター
+    window.addEventListener('beforeunload', (e) => {
+        if (masterRole) {
+            // 解放処理を確実に走らせる
+            unregisterActiveAdmin();
+            e.preventDefault();
+            e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
+        }
+    });
 
     function openCustomAlert(title, message) {
         const box = document.getElementById('custom-dialog-box');
@@ -701,17 +714,37 @@
         document.getElementById('custom-dialog-overlay').classList.add('active');
     }
 
-    function openCustomConfirm(actionType) {
+    function openCustomConfirm(actionType, extraData = null) {
         currentDialogContext = actionType;
+        currentTargetPeerId = extraData;
         const box = document.getElementById('custom-dialog-box');
-        let title = "通信の切断";
-        let message = "本部との通信セッションを切断し、最初の選択画面に戻りますか？";
+        
+        let title = "確認";
+        let message = "";
+        let confirmText = "実行する";
+        let isDanger = false;
+
+        if (actionType === 'reload') {
+            title = "通信の切断";
+            message = "本部との通信セッションを切断し、最初の選択画面に戻りますか？";
+            confirmText = "切断する";
+        } else if (actionType === 'kick-confirm') {
+            title = "支端末の切断確認";
+            message = `指定された支端末「${extraData.name}」を本当に切り離しますか？`;
+            confirmText = "切断を強制執行";
+            isDanger = true;
+        } else if (actionType === 'close-admin') {
+            title = "本部の完全終了";
+            message = "本当に本部システムをクローズしますか？現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
+            confirmText = "本部をクローズする";
+            isDanger = true;
+        }
         
         box.innerHTML = `
             <div class="dialog-title">${title}</div>
             <div class="dialog-message">${message}</div>
             <div class="flex-row">
-                <button class="btn" onclick="handleCustomConfirmResult(true)">切断する</button>
+                <button class="btn ${isDanger ? 'danger' : ''}" onclick="handleCustomConfirmResult(true)">${confirmText}</button>
                 <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
             </div>
         `;
@@ -720,8 +753,15 @@
 
     function handleCustomConfirmResult(isYes) {
         closeCustomDialog();
-        if (isYes && currentDialogContext === 'reload') {
+        if (!isYes) return;
+
+        if (currentDialogContext === 'reload') {
+            unregisterActiveAdmin();
             location.reload();
+        } else if (currentDialogContext === 'kick-confirm') {
+            executeKickClient(currentTargetPeerId.id);
+        } else if (currentDialogContext === 'close-admin') {
+            executeCloseAdminMaster();
         }
     }
 
@@ -758,7 +798,6 @@
         }
     }
 
-    // 📩 本部から特定端末へメッセージ作成プロンプト
     function openMessagePrompt(peerId, displayName) {
         currentDialogContext = 'send-msg';
         currentTargetPeerId = peerId;
@@ -809,11 +848,59 @@
         navigate('screen-gate');
     }
 
+    // 🛡️ 同一ブラウザ同時「本部」数チェックロジック
+    function getActiveAdminCount() {
+        cleanExpiredAdmins();
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        return list.length;
+    }
+
+    function registerActiveAdmin() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        list.push({ instanceId: currentInstanceId, timestamp: Date.now() });
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+        antiSpamChannel.postMessage({ type: 'PING' });
+    }
+
+    function unregisterActiveAdmin() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        list = list.filter(item => item.instanceId !== currentInstanceId);
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+    }
+
+    function cleanExpiredAdmins() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        // 1分以上応答の形跡がないゴミデータを自動削除
+        const now = Date.now();
+        list = list.filter(item => (now - item.timestamp) < 60000);
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+    }
+
+    antiSpamChannel.onmessage = (e) => {
+        if (e.data.type === 'PING' && masterRole === 'admin') {
+            // 生存確認に応答してタイムスタンプ更新
+            let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+            let mine = list.find(item => item.instanceId === currentInstanceId);
+            if (mine) mine.timestamp = Date.now();
+            localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+        }
+    };
+
+    // 10秒毎にハートビートをクリーン
+    setInterval(cleanExpiredAdmins, 10000);
+
     function selectRole(role) {
-        masterRole = role;
         if (role === 'admin') {
+            // 🛑 スパム＆同時制限バリデータ発火
+            if (getActiveAdminCount() >= 3) {
+                openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+                return;
+            }
+            registerActiveAdmin();
+            masterRole = 'admin';
             initAdminPeer();
         } else {
+            masterRole = 'client';
             navigate('screen-client-setup');
         }
     }
@@ -854,7 +941,6 @@
         });
     }
 
-    // 🖥️ 本部機能：接続端末リストの描画更新
     function renderClientList() {
         const listDiv = document.getElementById('dom-client-list');
         if(!listDiv) return;
@@ -874,7 +960,7 @@
                     </div>
                     <div class="client-actions">
                         <button class="btn secondary sm" onclick="openMessagePrompt('${conn.peer}', '${conn.displayName}')">メッセージ送信</button>
-                        <button class="btn danger sm" onclick="kickClient('${conn.peer}')">切断</button>
+                        <button class="btn danger sm" onclick="openCustomConfirm('kick-confirm', {id: '${conn.peer}', name: '${conn.displayName}'})">切断</button>
                     </div>
                 </div>
             `;
@@ -882,8 +968,8 @@
         listDiv.innerHTML = html;
     }
 
-    // 🔨 本部機能：特定端末を個別に切断（キック）
-    function kickClient(peerId) {
+    // ワンクッション後に実行されるキックロジック
+    function executeKickClient(peerId) {
         const conn = connectedClients.find(c => c.peer === peerId);
         if(conn) {
             conn.send({ type: 'KICKED_BY_ADMIN' });
@@ -893,6 +979,19 @@
                 renderClientList();
             }, 200);
         }
+    }
+
+    // 🛑 本部強制クローズ処理の実効化
+    function executeCloseAdminMaster() {
+        connectedClients.forEach(conn => {
+            if (conn.open) {
+                conn.send({ type: 'ADMIN_CLOSED_FORCED' });
+                conn.close();
+            }
+        });
+        unregisterActiveAdmin();
+        if(peer) peer.destroy();
+        location.reload();
     }
 
     // 2. 支端末接続
@@ -928,13 +1027,16 @@
                     state = data.state;
                     applyStateToUI();
                 }
-                // 📩 本部からのメッセージ個別ポップアップ受信
                 if (data.type === 'DIRECT_MESSAGE') {
                     openCustomAlert("本部からの通達", data.message);
                 }
-                // 🔨 本部から切断されたときの処理
                 if (data.type === 'KICKED_BY_ADMIN') {
                     openCustomAlert("切断のお知らせ", "本部管理者によって接続が切り離されました。");
+                    setTimeout(() => location.reload(), 3000);
+                }
+                // 本部が完全にクローズしたときの連動処理
+                if (data.type === 'ADMIN_CLOSED_FORCED') {
+                    openCustomAlert("システム終了", "本部システムが終了したため、通信を安全に停止しました。");
                     setTimeout(() => location.reload(), 3000);
                 }
             });
@@ -1031,7 +1133,6 @@
         }
     }
 
-    // UI反映
     function applyStateToUI() {
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
@@ -1077,6 +1178,7 @@
         const adminTimeBox = document.getElementById('dom-admin-time-box');
         const fullscreenAction = document.getElementById('box-admin-fullscreen-action');
         const listSection = document.getElementById('admin-client-list-section');
+        const closeAdminBtn = document.querySelector('#screen-admin > .btn.danger');
 
         if (forceClose) {
             isAdminFullscreen = true;
@@ -1091,6 +1193,7 @@
             paceCtrl.style.display = "none";
             directCtrl.style.display = "none";
             listSection.style.display = "none";
+            if(closeAdminBtn) closeAdminBtn.style.display = "none";
             btn.style.display = "none";
             monitor.style.padding = "80px 20px";
             monitor.style.background = "#ffffff";
@@ -1102,6 +1205,7 @@
             info.style.display = "block";
             settings.style.display = "block";
             listSection.style.display = "block";
+            if(closeAdminBtn) closeAdminBtn.style.display = "block";
             btn.style.display = "block";
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.6rem";
             monitor.style.padding = "44px 20px";
