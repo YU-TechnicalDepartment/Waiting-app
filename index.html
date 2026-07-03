@@ -8,11 +8,14 @@
     <style>
         :root {
             --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
-            --bg-surface: #ffffff;       /* じか設置するメインの白背景 */
+            --bg-surface: #f0f4f8;       /* 中央も完全に同じ色に統一しカード感を撤廃 */
+            --bg-panel: #ffffff;         /* 要素を際立たせるための高品位な白背景 */
             --text-main: #1e293b;        /* 視認性の高い墨色 */
             --text-sub: #64748b;         /* 上品なグレー */
             --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
             --accent-hover: #2563eb;
+            --accent-red: #ef4444;       /* 警告・切断用の洗練された赤 */
+            --accent-red-hover: #dc2626;
             --success-green: #10b981;
             --border-soft: rgba(0, 0, 0, 0.06);
             --toggle-bg: #e2e8f0;
@@ -36,13 +39,12 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* カード式をやめ、画面にじか設置されて吸い付くような幅広のコンテナ */
+        /* 背景色を完全統一したシームレスな幅広のじか設置コンテナ */
         .app-container {
             width: 100%;
-            max-width: 640px;
+            max-width: 680px;
             background: var(--bg-surface);
             padding: 50px 40px;
-            box-shadow: 0 4px 30px rgba(148, 163, 184, 0.05);
             display: flex;
             flex-direction: column;
             position: relative;
@@ -50,7 +52,7 @@
         }
 
         .app-container.fullscreen-preview {
-            max-width: 900px;
+            max-width: 960px;
         }
 
         .screen {
@@ -62,10 +64,19 @@
         }
 
         h1 {
-            font-size: 1.4rem;
+            font-size: 1.45rem;
             font-weight: 700;
             margin-bottom: 8px;
             letter-spacing: -0.01em;
+        }
+
+        h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-top: 28px;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            letter-spacing: 0.02em;
         }
 
         .description {
@@ -75,7 +86,7 @@
             line-height: 1.6;
         }
 
-        /* アイコン付きボタン */
+        /* 共通ボタン */
         .btn {
             width: 100%;
             padding: 14px 20px;
@@ -93,18 +104,12 @@
             gap: 8px;
         }
 
-        .btn svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
         .btn:hover {
             background-color: var(--accent-hover);
         }
 
         .btn.secondary {
-            background-color: var(--bg-main);
+            background-color: var(--bg-panel);
             color: var(--text-main);
             border: 1px solid var(--border-soft);
         }
@@ -113,15 +118,24 @@
             background-color: #e2e8f0;
         }
 
+        .btn.danger {
+            background-color: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn.danger:hover {
+            background-color: var(--accent-red-hover);
+        }
+
         .btn.sm {
-            padding: 9px 16px;
-            font-size: 0.85rem;
+            padding: 8px 14px;
+            font-size: 0.8rem;
             border-radius: 8px;
         }
 
         /* パネル選択 */
         .select-panel {
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 14px;
             padding: 22px;
@@ -132,18 +146,18 @@
             display: flex;
             align-items: center;
             gap: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
         }
 
         .select-panel:hover {
-            background: #ffffff;
             border-color: var(--accent-blue);
-            box-shadow: 0 4px 16px rgba(148, 163, 184, 0.06);
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.08);
         }
 
         .panel-icon {
             width: 44px;
             height: 44px;
-            background: rgba(59, 130, 246, 0.08);
+            background: rgba(59, 130, 246, 0.06);
             color: var(--accent-blue);
             border-radius: 10px;
             display: flex;
@@ -173,9 +187,9 @@
             color: var(--text-sub);
         }
 
-        /* 設定エリア */
+        /* 各種ボックス設定 */
         .settings-box {
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 12px;
             padding: 18px;
@@ -220,7 +234,7 @@
         .segment-btn.active {
             background: #fff;
             color: var(--text-main);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
 
         /* フォーム */
@@ -240,7 +254,7 @@
         .form-input {
             width: 100%;
             padding: 12px 14px;
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 10px;
             font-size: 0.95rem;
@@ -250,34 +264,34 @@
         }
 
         .form-input:focus {
-            background: #fff;
             border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
         }
 
         /* ディスプレイエリア */
         .monitor-block {
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 16px;
-            padding: 40px 20px;
+            padding: 44px 20px;
             margin: 24px 0;
             text-align: center;
             position: relative;
         }
 
         .huge-time {
-            font-size: 4.5rem;
+            font-size: 4.6rem;
             font-weight: 800;
             color: var(--text-main);
             line-height: 1;
         }
 
-        /* ディスプレイモード時は完全な漆黒にする */
+        /* 客用ディスプレイモード時は完全な漆黒（#000000） */
         .display-mode-text {
             color: #000000 !important;
         }
 
-        /* 「約」と「分」のサイズを同一にし、控えめにする */
+        /* 「約」と「分」のサイズ・太さを統一し、控えめにする */
         .side-text {
             font-size: 1.5rem;
             font-weight: 500;
@@ -294,7 +308,7 @@
         .huge-sub {
             font-size: 1.25rem;
             color: var(--text-sub);
-            margin-top: 16px;
+            margin-top: 18px;
         }
 
         .status-badge {
@@ -302,7 +316,7 @@
             align-items: center;
             gap: 6px;
             padding: 5px 12px;
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 6px;
             font-size: 0.75rem;
@@ -338,14 +352,60 @@
             letter-spacing: 0.05em;
         }
 
-        /* 🔒 隠しをやめ、スマートに見せる「解除ボタン」エリア */
         .action-bar-bottom {
             margin-top: 24px;
             display: flex;
             justify-content: flex-end;
         }
 
-        /* 🏛️ 高級感を重視したカスタムモダンダイアログ構造 */
+        /* 🖥️ 高度機能：本部管理用クライアント接続リストUI */
+        .client-list-container {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 24px;
+        }
+
+        .client-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .client-item:last-child {
+            border-bottom: none;
+        }
+
+        .client-meta {
+            text-align: left;
+        }
+
+        .client-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .client-id-sub {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-client-msg {
+            padding: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        /* 🏛️ 共通カスタムダイアログ構造（オーバーレイ） */
         .custom-dialog-overlay {
             position: fixed;
             top: 0;
@@ -372,7 +432,7 @@
         .custom-dialog-box {
             background: #ffffff;
             width: 90%;
-            max-width: 400px;
+            max-width: 420px;
             border-radius: 16px;
             padding: 28px 24px;
             box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
@@ -397,6 +457,7 @@
             color: var(--text-sub);
             margin-bottom: 20px;
             line-height: 1.5;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -410,7 +471,7 @@
         
         <div class="select-panel" onclick="selectRole('admin')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">本部管理者として開始</div>
@@ -420,7 +481,7 @@
 
         <div class="select-panel" onclick="selectRole('client')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">支端末として接続</div>
@@ -443,10 +504,7 @@
             <input type="text" id="input-pin" class="form-input" placeholder="0000" maxlength="4" style="text-align: center; font-weight: bold; letter-spacing: 0.2em;">
         </div>
 
-        <button class="btn" onclick="connectToAdmin()">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            接続を確立する
-        </button>
+        <button class="btn" onclick="connectToAdmin()">接続を確立する</button>
         <button class="btn secondary" onclick="backToGate()" style="margin-top: 12px;">戻る</button>
     </div>
 
@@ -520,6 +578,13 @@
                 <button class="btn sm secondary" onclick="adjustDirectMinutes(-10)">-10分</button>
             </div>
         </div>
+
+        <div id="admin-client-list-section">
+            <h2>接続中の支端末モニター 一覧</h2>
+            <div class="client-list-container" id="dom-client-list">
+                <div class="empty-client-msg">現在接続されている支端末はありません。</div>
+            </div>
+        </div>
     </div>
 
     <div id="screen-client-choices" class="screen">
@@ -529,7 +594,7 @@
 
         <div class="select-panel" onclick="goClientMode('display')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">ディスプレイモードを開く</div>
@@ -539,7 +604,7 @@
 
         <div class="select-panel" onclick="goClientMode('staff')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">スタッフ操作モードを開く</div>
@@ -551,7 +616,7 @@
     </div>
 
     <div id="screen-display" class="screen">
-        <div class="monitor-block" style="padding: 60px 20px; background: var(--bg-main); margin-bottom: 0;">
+        <div class="monitor-block" style="padding: 60px 20px; background: var(--bg-panel); margin-bottom: 0;">
             <div style="font-size: 0.9rem; color: var(--text-sub); letter-spacing: 0.05em; margin-bottom: 4px;">現在の待ち時間</div>
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
@@ -599,19 +664,19 @@
 </div>
 
 <div id="custom-dialog-overlay" class="custom-dialog-overlay">
-    <div class="custom-dialog-box" id="custom-dialog-box">
-        </div>
+    <div class="custom-dialog-box" id="custom-dialog-box"></div>
 </div>
 
 <script>
     let peer = null;
     let masterRole = null; 
     let correctPin = ""; 
-    let connectedClients = []; 
-    let hostConnection = null; 
+    let connectedClients = []; // 本部用：接続元Connectionの配列
+    let hostConnection = null; // 支端末用：本部へのConnection
     let isAdminFullscreen = false;
+    let clientNameCounter = 0; // 端末命名用カウンタ
 
-    // 状態の一元管理
+    // 状態データ
     let state = {
         teams: 0,
         pace: 5,
@@ -622,8 +687,9 @@
         lockPassword: '1234'
     };
 
-    // 🏛️ ブラウザ標準依存を完全脱却する、独自カスタムダイアログの制御コアロジック
+    // 🏛️ ダイアログロジック
     let currentDialogContext = null;
+    let currentTargetPeerId = null;
 
     function openCustomAlert(title, message) {
         const box = document.getElementById('custom-dialog-box');
@@ -638,7 +704,6 @@
     function openCustomConfirm(actionType) {
         currentDialogContext = actionType;
         const box = document.getElementById('custom-dialog-box');
-        
         let title = "通信の切断";
         let message = "本部との通信セッションを切断し、最初の選択画面に戻りますか？";
         
@@ -688,9 +753,45 @@
                 toggleAdminPreview(true);
             }
         } else {
-            // エラー時も独自のアラートを重ねる
             document.getElementById('dialog-prompt-input').value = "";
             openCustomAlert("認証エラー", "パスワードが正しくありません。");
+        }
+    }
+
+    // 📩 本部から特定端末へメッセージ作成プロンプト
+    function openMessagePrompt(peerId, displayName) {
+        currentDialogContext = 'send-msg';
+        currentTargetPeerId = peerId;
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">${displayName} へメッセージ送信</div>
+            <div class="dialog-message">端末の画面にポップアップ表示するテキストを入力してください。</div>
+            <div class="form-group">
+                <input type="text" id="dialog-msg-input" class="form-input" placeholder="例：受付を一時中断してください" autocomplete="off">
+            </div>
+            <div class="flex-row">
+                <button class="btn" onclick="submitMessageToClient()">送信する</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+        setTimeout(() => document.getElementById('dialog-msg-input').focus(), 50);
+    }
+
+    function submitMessageToClient() {
+        const text = document.getElementById('dialog-msg-input').value.trim();
+        if(!text) {
+            openCustomAlert("入力エラー", "メッセージ内容が空です。");
+            return;
+        }
+        closeCustomDialog();
+        
+        const conn = connectedClients.find(c => c.peer === currentTargetPeerId);
+        if(conn && conn.open) {
+            conn.send({ type: 'DIRECT_MESSAGE', message: text });
+            openCustomAlert("送信完了", "端末にメッセージを配信しました。");
+        } else {
+            openCustomAlert("エラー", "対象の端末との通信が見つかりません。");
         }
     }
 
@@ -698,7 +799,6 @@
         document.getElementById('custom-dialog-overlay').classList.remove('active');
     }
 
-    // 画面遷移ロジック
     function navigate(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
@@ -733,24 +833,66 @@
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
                     if (data.pin === correctPin) {
+                        clientNameCounter++;
+                        conn.displayName = `端末 - ${clientNameCounter}`;
                         conn.send({ type: 'AUTH_OK', state: state });
                         connectedClients.push(conn);
+                        renderClientList();
                     } else {
                         conn.send({ type: 'AUTH_NG' });
                     }
                 }
                 if (data.type === 'ACTION_ADJUST') {
-                    if (data.mode === 'TEAM') {
-                        adjustMasterTeams(data.amount);
-                    } else if (data.mode === 'MIN') {
-                        adjustDirectMinutes(data.amount);
-                    }
+                    if (data.mode === 'TEAM') adjustMasterTeams(data.amount);
+                    else if (data.mode === 'MIN') adjustDirectMinutes(data.amount);
                 }
             });
             conn.on('close', () => {
                 connectedClients = connectedClients.filter(c => c.peer !== conn.peer);
+                renderClientList();
             });
         });
+    }
+
+    // 🖥️ 本部機能：接続端末リストの描画更新
+    function renderClientList() {
+        const listDiv = document.getElementById('dom-client-list');
+        if(!listDiv) return;
+
+        if(connectedClients.length === 0) {
+            listDiv.innerHTML = `<div class="empty-client-msg">現在接続されている支端末はありません。</div>`;
+            return;
+        }
+
+        let html = '';
+        connectedClients.forEach(conn => {
+            html += `
+                <div class="client-item" id="item-${conn.peer}">
+                    <div class="client-meta">
+                        <div class="client-name">${conn.displayName}</div>
+                        <div class="client-id-sub">ID: ${conn.peer}</div>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn secondary sm" onclick="openMessagePrompt('${conn.peer}', '${conn.displayName}')">メッセージ送信</button>
+                        <button class="btn danger sm" onclick="kickClient('${conn.peer}')">切断</button>
+                    </div>
+                </div>
+            `;
+        });
+        listDiv.innerHTML = html;
+    }
+
+    // 🔨 本部機能：特定端末を個別に切断（キック）
+    function kickClient(peerId) {
+        const conn = connectedClients.find(c => c.peer === peerId);
+        if(conn) {
+            conn.send({ type: 'KICKED_BY_ADMIN' });
+            setTimeout(() => {
+                conn.close();
+                connectedClients = connectedClients.filter(c => c.peer !== peerId);
+                renderClientList();
+            }, 200);
+        }
     }
 
     // 2. 支端末接続
@@ -785,6 +927,15 @@
                 if (data.type === 'BROADCAST_SYNC') {
                     state = data.state;
                     applyStateToUI();
+                }
+                // 📩 本部からのメッセージ個別ポップアップ受信
+                if (data.type === 'DIRECT_MESSAGE') {
+                    openCustomAlert("本部からの通達", data.message);
+                }
+                // 🔨 本部から切断されたときの処理
+                if (data.type === 'KICKED_BY_ADMIN') {
+                    openCustomAlert("切断のお知らせ", "本部管理者によって接続が切り離されました。");
+                    setTimeout(() => location.reload(), 3000);
                 }
             });
 
@@ -880,7 +1031,7 @@
         }
     }
 
-    // UIデータ反映
+    // UI反映
     function applyStateToUI() {
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
@@ -914,7 +1065,7 @@
         document.getElementById('client-direct-box').style.display = isPace ? "none" : "block";
     }
 
-    // 4. 本部：客用表示フルスクリーン
+    // 4. 本部フルスクリーン
     function toggleAdminPreview(forceClose = false) {
         const container = document.getElementById('main-container');
         const info = document.getElementById('admin-info');
@@ -925,6 +1076,7 @@
         const monitor = document.getElementById('admin-monitor');
         const adminTimeBox = document.getElementById('dom-admin-time-box');
         const fullscreenAction = document.getElementById('box-admin-fullscreen-action');
+        const listSection = document.getElementById('admin-client-list-section');
 
         if (forceClose) {
             isAdminFullscreen = true;
@@ -938,6 +1090,7 @@
             settings.style.display = "none";
             paceCtrl.style.display = "none";
             directCtrl.style.display = "none";
+            listSection.style.display = "none";
             btn.style.display = "none";
             monitor.style.padding = "80px 20px";
             monitor.style.background = "#ffffff";
@@ -948,10 +1101,11 @@
             container.classList.remove('fullscreen-preview');
             info.style.display = "block";
             settings.style.display = "block";
+            listSection.style.display = "block";
             btn.style.display = "block";
-            document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.5rem";
-            monitor.style.padding = "40px 20px";
-            monitor.style.background = "var(--bg-main)";
+            document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.6rem";
+            monitor.style.padding = "44px 20px";
+            monitor.style.background = "var(--bg-panel)";
             adminTimeBox.classList.remove('display-mode-text');
             fullscreenAction.style.display = "none";
             btn.innerText = "客用大画面表示に切替";
