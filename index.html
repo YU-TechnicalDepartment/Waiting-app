@@ -125,7 +125,7 @@
             border-radius: 8px;
         }
 
-        /* パネル選択（番号を廃し、左側に美しく配置されたSVGインラインアイコン） */
+        /* パネル選択 */
         .select-panel {
             background: rgba(255, 255, 255, 0.6);
             border: 1px solid var(--border-soft);
@@ -273,6 +273,25 @@
             line-height: 1;
         }
 
+        /* 客用ディスプレイモードでは文字を完全に黒にする */
+        .display-mode-text {
+            color: #000000 !important;
+        }
+
+        /* 「約」と「分」のサイズを完全に統一して小さく控えめにする */
+        .side-text {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-sub);
+            margin: 0 6px;
+            vertical-align: middle;
+        }
+
+        .display-mode-text .side-text {
+            color: #000000 !important;
+            font-weight: 600;
+        }
+
         .huge-sub {
             font-size: 1.2rem;
             color: var(--text-sub);
@@ -412,11 +431,17 @@
                     <button class="segment-btn" id="ctrl-direct" onclick="changeStateSetting('controlMode', 'direct')">分単位を直接加減</button>
                 </div>
             </div>
+            <div class="setting-row" style="margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 12px;">
+                <div class="setting-label">ロック解除パスワード</div>
+                <input type="text" id="admin-lock-password" class="form-input" value="1234" style="width: 140px; padding: 6px 10px; text-align: center;" onchange="updateLockPassword()">
+            </div>
         </div>
 
         <div class="monitor-block" id="admin-monitor">
             <div style="font-size: 0.85rem; color: var(--text-sub);" id="lbl-admin-title">現在の全体待ち時間</div>
-            <div class="huge-time"><span id="txt-about-admin"></span><span id="admin-time">0</span><span style="font-size: 1.4rem; font-weight: 500; margin-left: 2px;">分</span></div>
+            <div class="huge-time" id="dom-admin-time-box">
+                <span class="side-text" id="txt-about-admin">約</span><span id="admin-time">0</span><span class="side-text">分</span>
+            </div>
             <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組の行列</div>
         </div>
 
@@ -475,12 +500,14 @@
     <div id="screen-display" class="screen" style="position: relative;">
         <div class="monitor-block" style="padding: 60px 20px; background: #fff; margin-bottom: 0;">
             <div style="font-size: 0.9rem; color: var(--text-sub); letter-spacing: 0.05em;">現在の待ち時間</div>
-            <div class="huge-time" style="font-size: 4.8rem; color: var(--accent-blue);"><span id="txt-about-view"></span><span id="view-time">0</span><span style="font-size: 1.8rem; font-weight:500; margin-left: 2px;">分</span></div>
-            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">およそ <span id="view-teams" style="font-weight: 800;">0</span> 組待ち</div>
+            <div class="huge-time display-mode-text" id="dom-client-time-box">
+                <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
+            </div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">およそ <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
         </div>
         <p class="lock-text">⚠️ 表示ロック中</p>
         
-        <div class="secret-area" onclick="returnToChoices()"></div>
+        <div class="secret-area" onclick="attemptUnlock('choices')"></div>
     </div>
 
     <div id="screen-staff" class="screen">
@@ -491,14 +518,14 @@
         <h1>リモートカウント制御</h1>
 
         <div class="monitor-block">
-            <div class="huge-time"><span id="txt-about-staff"></span><span id="staff-time">0</span>分</div>
+            <div class="huge-time"><span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span></div>
             <div class="huge-sub" id="box-staff-teams">現在地：<span id="staff-teams">0</span> 組待機中</div>
         </div>
 
         <div id="client-pace-box">
             <div class="flex-row">
-                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1組 (列に追加)</button>
-                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1組 (案内完了)</button>
+                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1組 追加</button>
+                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1組 消化</button>
             </div>
         </div>
 
@@ -509,7 +536,7 @@
                 <button class="btn sm" onclick="sendRemoteAction('MIN', 10)">+10分</button>
                 <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -1)">-1分</button>
                 <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -5)">-5分</button>
-                <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -1------------10)">-10分</button>
+                <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -10)">-10分</button>
             </div>
         </div>
     </div>
@@ -522,16 +549,17 @@
     let correctPin = ""; 
     let connectedClients = []; 
     let hostConnection = null; 
-    let isAdminFullscreen = false; // 本部画面の客用大画面トグル状態
+    let isAdminFullscreen = false;
 
-    // ⚙️ すべての設定とデータを一元管理するステート。これがWebRTCで丸ごと同期されます。
+    // 設定とデータの一元管理（丸ごと同期）
     let state = {
         teams: 0,
         pace: 5,
         totalTime: 0,
-        showAbout: true,      // 「約」を付けるか
-        showTeams: true,      // 「何組待ち」を表示するか
-        controlMode: 'pace'   // 操作方法 ('pace':組数ベース, 'direct':分ベース直接)
+        showAbout: true,      
+        showTeams: true,      
+        controlMode: 'pace',
+        lockPassword: '1234'  // デフォルト解除パスワード
     };
 
     function navigate(screenId) {
@@ -553,7 +581,7 @@
         }
     }
 
-    // 1. 本部：PeerJSホスト起動
+    // 1. 本部ホスト起動
     function initAdminPeer() {
         navigate('screen-admin');
         const customId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
@@ -588,7 +616,7 @@
         });
     }
 
-    // 2. 支端末：ホストへのデータ接続
+    // 2. 支端末ホスト接続
     function connectToAdmin() {
         const targetId = document.getElementById('input-peer-id').value.trim();
         const pinVal = document.getElementById('input-pin').value.trim();
@@ -630,7 +658,6 @@
         });
     }
 
-    // 支端末の画面遷移（セッションを切断せずに選択画面に戻れるようにする）
     function goClientMode(mode) {
         if (mode === 'display') navigate('screen-display');
         else navigate('screen-staff');
@@ -640,11 +667,27 @@
         navigate('screen-client-choices');
     }
 
-    // 3. 本部：各種動的表示設定の切替スイッチ処理
+    // 🔒 パスワード入力によるロック解除処理
+    function attemptUnlock(targetAction) {
+        const input = prompt("管理ロック解除パスワードを入力してください：");
+        if (input === null) return; // キャンセル
+
+        if (input === state.lockPassword) {
+            if (targetAction === 'choices') {
+                returnToChoices();
+            } else if (targetAction === 'admin-control') {
+                // 本部画面のフルスクリーン解除
+                toggleAdminPreview(true);
+            }
+        } else {
+            alert("パスワードが正しくありません。ロックを解除できません。");
+        }
+    }
+
+    // 3. 本部動的設定変更
     function changeStateSetting(key, value) {
         state[key] = value;
         
-        // UIのトグルスイッチのアクティブ表示変更
         if(key === 'showAbout') {
             document.getElementById('about-on').classList.toggle('active', value === true);
             document.getElementById('about-off').classList.toggle('active', value === false);
@@ -659,17 +702,30 @@
         recalculateTotal();
     }
 
-    // 本部データの操作（組数・時間）
+    function updateLockPassword() {
+        const pwdInput = document.getElementById('admin-lock-password');
+        if (pwdInput) {
+            state.lockPassword = pwdInput.value.trim();
+            broadcastToAll();
+        }
+    }
+
     function adjustMasterTeams(amount) {
         state.teams += amount;
         if (state.teams < 0) state.teams = 0;
         recalculateTotal();
     }
 
+    document.body.addEventListener('click', function(e) {
+        // 特殊なマイナス加算時のタイポセーフティ用
+        if (e.target && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('-1------------10')) {
+            adjustDirectMinutes(-10);
+        }
+    });
+
     function adjustDirectMinutes(amount) {
         state.totalTime += amount;
         if (state.totalTime < 0) state.totalTime = 0;
-        // 分直接の時は、組数は0クリア、または整合性のためにそのまま保持
         applyStateToUI();
         broadcastToAll();
     }
@@ -701,16 +757,14 @@
         }
     }
 
-    // 4. 支端末から本部へのリモート操作要求
     function sendRemoteAction(mode, amount) {
         if (hostConnection && hostConnection.open) {
             hostConnection.send({ type: 'ACTION_ADJUST', mode: mode, amount: amount });
         }
     }
 
-    // 5. ⚙️ 本部・支端末共通：ステートに基づいてすべてのUIコンポーネントを完全に書き換えるコアロジック
+    // 5. UI完全書き換えロジック
     function applyStateToUI() {
-        // 数値データの流し込み
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
             'view-time': state.totalTime, 'view-teams': state.teams,
@@ -721,32 +775,34 @@
             if (el) el.innerText = renderNumbers[id];
         }
 
-        // A. 「約」の出し分け
-        const aboutText = state.showAbout ? "約 " : "";
-        document.getElementById('txt-about-admin').innerText = aboutText;
-        document.getElementById('txt-about-view').innerText = aboutText;
-        document.getElementById('txt-about-staff').innerText = aboutText;
+        // パスワード入力同期
+        const pwdInput = document.getElementById('admin-lock-password');
+        if (pwdInput && masterRole !== 'admin') {
+            pwdInput.value = state.lockPassword;
+        }
 
-        // B. 「何組待ち」の出し分け
+        // 「約」の出し分け
+        const aboutDisplay = state.showAbout ? "inline" : "none";
+        document.getElementById('txt-about-admin').style.display = aboutDisplay;
+        document.getElementById('txt-about-view').style.display = aboutDisplay;
+        document.getElementById('txt-about-staff').style.display = aboutDisplay;
+
+        // 「何組待ち」の出し分け
         const teamsDisplay = state.showTeams ? "block" : "none";
         document.getElementById('box-admin-teams').style.display = teamsDisplay;
         document.getElementById('box-view-teams').style.display = teamsDisplay;
         document.getElementById('box-staff-teams').style.display = teamsDisplay;
 
-        // C. 操作パネル（組数ベース or 分ベース直接）の出し分け
+        // 操作パネル出し分け
         const isPace = (state.controlMode === 'pace');
-        
-        // 本部側コントロールパネル切り替え
         document.getElementById('panel-pace-control').style.display = isPace ? "block" : "none";
         document.getElementById('panel-direct-control').style.display = isPace ? "none" : "block";
-        
-        // 支端末（スタッフ操作）パネル切り替え
         document.getElementById('client-pace-box').style.display = isPace ? "block" : "none";
         document.getElementById('client-direct-box').style.display = isPace ? "none" : "block";
     }
 
     // 6. 本部：客用表示フルスクリーントグル機能
-    function toggleAdminPreview() {
+    function toggleAdminPreview(forceClose = false) {
         const container = document.getElementById('main-container');
         const info = document.getElementById('admin-info');
         const settings = document.getElementById('admin-settings-area');
@@ -755,31 +811,50 @@
         const btn = document.getElementById('btn-toggle-preview');
         const monitor = document.getElementById('admin-monitor');
         const lblTitle = document.getElementById('lbl-admin-title');
+        const adminTimeBox = document.getElementById('dom-admin-time-box');
+
+        if (forceClose) {
+            isAdminFullscreen = true;
+        }
 
         isAdminFullscreen = !isAdminFullscreen;
 
         if (isAdminFullscreen) {
-            // 客に見せるための大画面表示へ（設定や操作盤を隠して数字を最大化）
+            // 客用フルスクリーン表示
             container.classList.add('fullscreen-preview');
             info.style.display = "none";
             settings.style.display = "none";
             paceCtrl.style.display = "none";
             directCtrl.style.display = "none";
-            lblTitle.style.size = "1.2rem";
             monitor.style.padding = "70px 20px";
             monitor.style.background = "#fff";
+            adminTimeBox.classList.add('display-mode-text');
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "6rem";
             btn.innerText = "管理者画面に戻る";
+            
+            // フルスクリーン時の解除トリガーを追加（誤操作防止パスワードロック用）
+            let secret = document.getElementById('admin-fullscreen-secret');
+            if(!secret) {
+                secret = document.createElement('div');
+                secret.id = 'admin-fullscreen-secret';
+                secret.className = 'secret-area';
+                secret.onclick = () => attemptUnlock('admin-control');
+                monitor.appendChild(secret);
+            }
         } else {
-            // 通常の管理者用コントロール画面に戻す
+            // 管理画面に戻す
             container.classList.remove('fullscreen-preview');
             info.style.display = "block";
             settings.style.display = "block";
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.2rem";
             monitor.style.padding = "36px 20px";
             monitor.style.background = "rgba(255, 255, 255, 0.5)";
+            adminTimeBox.classList.remove('display-mode-text');
             btn.innerText = "客用大画面表示に切替";
-            // パネル表示は現在のstateに従って復元
+            
+            const secret = document.getElementById('admin-fullscreen-secret');
+            if(secret) secret.remove();
+            
             applyStateToUI();
         }
     }
