@@ -4,22 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>リアルタイム待ち時間管理システム</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <style>
-        /* 徹底的な引き算：ミニマルな高級感のための変数定義 */
+        /* 提示されたスクショの配色・空気感を再現したミニマルクリーンUI */
         :root {
-            /* 背景はあえて真っ白ではなく、1%だけニュアンスを加えた上質な白 */
-            --bg-base: #f8f9fa; 
-            
-            /* 白背景に映える、光を完全に透過・屈折させるガラスの定義 */
-            --glass-bg: rgba(255, 255, 255, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.6);
-            --glass-shadow: rgba(142, 151, 168, 0.12);
-            
-            /* 文字とアクセント：ギラギラ感を排除した墨色と静かなブルー */
-            --text-main: #1e293b;
-            --text-sub: #64748b;
-            --accent-color: #2563eb; /* 知的なコバルトブルー */
-            --accent-success: #16a34a; /* 静かなグリーン */
+            --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
+            --card-bg: rgba(255, 255, 255, 0.85); /* 透明感のある白 */
+            --card-border: rgba(255, 255, 255, 0.6);
+            --text-main: #1e293b;        /* 視認性の高い墨色 */
+            --text-sub: #64748b;         /* 上品なグレー */
+            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
+            --accent-hover: #2563eb;
+            --success-green: #10b981;
+            --border-soft: rgba(0, 0, 0, 0.06);
         }
 
         * {
@@ -29,419 +26,516 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--bg-base);
-            /* 静かな奥行きを出すため、非常に淡いトーンのバックグラウンドテクスチャ */
-            background-image: radial-gradient(#e2e8f0 1.2px, transparent 1.2px);
-            background-size: 24px 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: var(--text-main);
             padding: 20px;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 究極の透明感を表現するメインカード */
-        .main-card {
+        /* 背面をぼかし、浮き立つような透明感を持たせたメインカード */
+        .app-container {
             width: 100%;
-            max-width: 500px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 45px 35px;
-            /* 外側の静かな影と、内側の白い映り込み（エッジライト） */
-            box-shadow: 
-                0 4px 6px -1px var(--glass-shadow),
-                0 20px 40px -5px var(--glass-shadow),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 520px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px 32px;
+            box-shadow: 0 8px 32px rgba(148, 163, 184, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
         }
 
-        /* 画面切り替え構造 */
         .screen {
             display: none;
-            animation: minimalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .screen.active {
             display: block;
         }
 
-        /* タイポグラフィ：太さと余白だけで質感を出す */
+        /* タイポグラフィ */
         h1 {
-            font-size: 1.45rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            color: var(--text-main);
+            font-size: 1.35rem;
+            font-weight: 700;
             margin-bottom: 8px;
+            letter-spacing: -0.01em;
         }
 
-        .subtitle {
+        .description {
             font-size: 0.85rem;
             color: var(--text-sub);
-            margin-bottom: 35px;
-            line-height: 1.6;
+            margin-bottom: 28px;
+            line-height: 1.5;
         }
 
-        /* 役割選択（ゲート）：無駄な装飾を削ぎ落とした透明な選択肢 */
-        .role-option-btn {
+        /* 画像のような角が丸くクリーンなボタン */
+        .btn {
             width: 100%;
-            background: rgba(255, 255, 255, 0.3);
-            border: 1px solid rgba(0, 0, 0, 0.04);
+            padding: 13px 20px;
+            background-color: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-0.5px);
+        }
+
+        .btn.secondary {
+            background-color: #fff;
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+            box-shadow: none;
+        }
+
+        .btn.secondary:hover {
+            background-color: var(--bg-main);
+            border-color: rgba(0, 0, 0, 0.12);
+        }
+
+        /* 選択用のフラットな大判パネル */
+        .select-panel {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border-soft);
             border-radius: 14px;
             padding: 20px;
             margin-bottom: 14px;
             text-align: left;
             cursor: pointer;
             transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
         }
 
-        .role-option-btn:hover {
-            background: rgba(255, 255, 255, 0.7);
-            border-color: rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px -5px var(--glass-shadow);
+        .select-panel:hover {
+            background: #fff;
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 16px rgba(148, 163, 184, 0.08);
         }
 
-        .role-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-main);
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 700;
             margin-bottom: 4px;
         }
 
-        .role-desc {
+        .panel-desc {
             font-size: 0.8rem;
             color: var(--text-sub);
         }
 
-        /* ソリッドで知的なボタン */
-        .action-btn {
-            width: 100%;
-            padding: 14px;
-            background: var(--text-main); /* あえて黒（墨色）にすることで締まる */
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .action-btn:hover {
-            background: #0f172a;
-            transform: translateY(-1px);
-        }
-
-        .action-btn.secondary {
-            background: rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            color: var(--text-main);
-        }
-
-        .action-btn.secondary:hover {
-            background: rgba(0, 0, 0, 0.06);
-        }
-
-        /* 入力フォーム */
-        .input-group {
-            margin-bottom: 20px;
+        /* フォームデザイン */
+        .form-group {
+            margin-bottom: 18px;
             text-align: left;
         }
 
-        .input-label {
+        .form-label {
             display: block;
             font-size: 0.8rem;
+            font-weight: 700;
             color: var(--text-sub);
             margin-bottom: 6px;
-            font-weight: 500;
         }
 
-        .text-input {
+        .form-input {
             width: 100%;
             padding: 12px 14px;
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            border-radius: 10px;
-            color: var(--text-main);
-            font-size: 0.95rem;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        .text-input:focus {
-            border-color: var(--text-main);
             background: #fff;
-        }
-
-        /* 待ち時間表示エリア：視認性を最優先し、過度な枠線を排除 */
-        .monitor-display {
-            padding: 35px 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 0, 0, 0.02);
-            margin: 20px 0;
-        }
-
-        .huge-number {
-            font-size: 3.8rem;
-            font-weight: 700;
-            letter-spacing: -0.04em;
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            font-size: 0.95rem;
             color: var(--text-main);
+            outline: none;
+            transition: border 0.2s;
         }
 
-        /* ステータスバッジ（静かなデザイン） */
+        .form-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* 視認性最優先の大型ディスプレイエリア */
+        .monitor-block {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 36px 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .huge-time {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .huge-sub {
+            font-size: 1.05rem;
+            color: var(--text-sub);
+            margin-top: 12px;
+        }
+
+        /* ステータスバッジ */
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 12px;
+            padding: 4px 10px;
             background: #fff;
-            border: 1px solid rgba(0,0,0,0.06);
-            color: var(--text-main);
+            border: 1px solid var(--border-soft);
             border-radius: 6px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 700;
             margin-bottom: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        .pulse-dot {
-            width: 5px;
-            height: 5px;
-            background-color: var(--accent-success);
+        .dot {
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
+            background-color: var(--success-green);
         }
 
-        .btn-row {
+        .flex-row {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-top: 16px;
         }
 
-        @keyframes minimalFadeIn {
-            from { opacity: 0; transform: scale(0.99); }
-            to { opacity: 1; transform: scale(1); }
+        .lock-text {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            text-align: center;
+            margin-top: 12px;
+            opacity: 0.5;
+        }
+
+        .secret-area {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 44px;
+            height: 44px;
+            cursor: default;
         }
     </style>
 </head>
 <body>
 
-<div class="main-card">
+<div class="app-container">
 
     <div id="screen-gate" class="screen active">
-        <h1>システムの開始</h1>
-        <p class="subtitle">端末の役割を選択してください。[cite: 7]<br>GitHub PagesとWebRTCの連携により完全に無料で同期します。[cite: 4]</p>
+        <h1>リアルタイム待ち時間管理</h1>
+        <p class="description">PeerJSを使用したP2P直結通信を行います。最初にこの端末の役割を選択してください。</p>
         
-        <button class="role-option-btn" onclick="selectRole('admin')">
-            <div>
-                <div class="role-title">① 本部管理者として開始</div>
-                <div class="role-desc">システム全体の統括、PINコードの発行 [cite: 5, 13]</div>
-            </div>
-        </button>
+        <div class="select-panel" onclick="selectRole('admin')">
+            <div class="panel-title">① 本部管理者として開始</div>
+            <div class="panel-desc">新規接続ルームを立ち上げ、統括データとPINコードを管理します。</div>
+        </div>
 
-        <button class="role-option-btn" onclick="selectRole('client')">
-            <div>
-                <div class="role-title">② 支端末として接続</div>
-                <div class="role-desc">本部に接続し、ディスプレイ表示・現場操作を行います [cite: 17, 23]</div>
+        <div class="select-panel" onclick="selectRole('client')">
+            <div class="select-panel-inside">
+                <div class="panel-title">② 支端末として接続</div>
+                <div class="panel-desc">本部に接続し、ディスプレイ表示、または現場でのカウント操作を行います。</div>
             </div>
-        </button>
+        </div>
     </div>
 
     <div id="screen-client-setup" class="screen">
-        <h1>本部への接続</h1>
-        <p class="subtitle">本部端末に表示されている認証情報を入力して同期します。[cite: 18, 21]</p>
+        <h1>本部への接続設定</h1>
+        <p class="description">本部画面に表示されている「接続用ID」と「4桁のPIN」を入力してください。</p>
         
-        <div class="input-group">
-            <label class="input-label">本部UUID [cite: 16]</label>
-            <input type="text" id="input-uuid" class="text-input" placeholder="cfg-xxxx-xxxx">
+        <div class="form-group">
+            <label class="form-label">接続用ID (Peer ID)</label>
+            <input type="text" id="input-peer-id" class="form-input" placeholder="例: wait-xxxxxx">
         </div>
 
-        <div class="input-group">
-            <label class="input-label">4桁の認証PINコード [cite: 20]</label>
-            <input type="text" id="input-pin" class="text-input" placeholder="0000" maxlength="4" style="letter-spacing: 0.2em; font-weight: bold; text-align: center;">
+        <div class="form-group">
+            <label class="form-label">4桁の認証PINコード</label>
+            <input type="text" id="input-pin" class="form-input" placeholder="0000" maxlength="4" style="text-align: center; font-weight: bold; letter-spacing: 0.2em;">
         </div>
 
-        <button class="action-btn" onclick="connectToAdmin()">接続を確立する</button>
-        <button class="action-btn secondary" onclick="goBack()" style="margin-top: 10px;">戻る</button>
+        <button class="btn" onclick="connectToAdmin()">接続を確立する</button>
+        <button class="btn secondary" onclick="backToGate()" style="margin-top: 10px;">戻る</button>
     </div>
 
-    <div id="screen-admin-dashboard" class="screen">
-        <div class="status-badge"><span class="pulse-dot"></span>本部稼働中</div>
+    <div id="screen-admin" class="screen">
+        <div class="status-badge"><span class="dot"></span>本部システム稼働中</div>
         <h1>本部コントロール</h1>
-        <p class="subtitle" id="admin-pairing-info" style="margin-bottom: 20px;">PINを発行して支端末を承認してください [cite: 19, 20]</p>
+        <p class="description" id="admin-info">通信を初期化中...</p>
 
-        <div class="monitor-display">
-            <div style="color: var(--text-sub); font-size: 0.8rem; margin-bottom: 2px;">現在の全体待ち時間</div>
-            <div class="huge-number"><span id="admin-time">25</span><span style="font-size: 1.2rem; font-weight: 500; margin-left: 4px;">分</span></div>
-            <div style="color: var(--text-sub); font-size: 0.8rem; margin-top: 4px;">計 <span id="admin-teams" style="color: var(--text-main); font-weight: 600;">5</span> 組の行列</div>
+        <div class="monitor-block">
+            <div style="font-size: 0.8rem; color: var(--text-sub);">現在の全体待ち時間</div>
+            <div class="huge-time"><span id="admin-time">0</span><span style="font-size: 1.4rem; font-weight: 500; margin-left: 2px;">分</span></div>
+            <div class="huge-sub">計 <span id="admin-teams">0</span> 組の行列</div>
         </div>
 
-        <div class="input-group">
-            <label class="input-label">1組あたりの所要時間 (分) [cite: 13]</label>
-            <input type="number" id="admin-pace" class="text-input" value="5" onchange="syncData()">
+        <div class="form-group">
+            <label class="form-label">1組あたりの所要時間 (分)</label>
+            <input type="number" id="admin-pace" class="form-input" value="5" onchange="updatePace()">
         </div>
 
-        <div class="btn-row">
-            <button class="action-btn" onclick="adjustTeams(1)">+1組</button>
-            <button class="action-btn secondary" onclick="adjustTeams(-1)">-1組</button>
+        <div class="flex-row">
+            <button class="btn" onclick="adjustMasterTeams(1)">+1組 追加</button>
+            <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1組 消化</button>
         </div>
-
-        <button class="action-btn secondary" onclick="generateSecureAuth()" style="margin-top: 14px; font-size: 0.8rem;">ペアリング情報を再更新 [cite: 16, 20]</button>
     </div>
 
-    <div id="screen-client-connected" class="screen">
-        <div class="status-badge"><span class="pulse-dot"></span>同期成功</div>
-        <h1>表示モードの選択</h1>
-        <p class="subtitle">現場の設置場所に合わせて役割を切り替えます。[cite: 7, 23]</p>
+    <div id="screen-client-choices" class="screen">
+        <div class="status-badge"><span class="dot"></span>本部と同期完了</div>
+        <h1>表示モードの決定</h1>
+        <p class="description">設置場所に合わせて適切な画面モードを選択してください。</p>
 
-        <button class="role-option-btn" onclick="activateClientMode('display')">
-            <div>
-                <div class="role-title">① ディスプレイモード</div>
-                <div class="role-desc">お客様確認用。余計なボタンを排除し画面をロック [cite: 8, 9, 31]</div>
-            </div>
-        </button>
+        <div class="select-panel" onclick="goClientMode('display')">
+            <div class="panel-title">① ディスプレイモード</div>
+            <div class="panel-desc">来場者確認用画面。誤操作を防ぐためにボタンが隠され、画面がロックされます。</div>
+        </div>
 
-        <button class="role-option-btn" onclick="activateClientMode('staff')">
-            <div>
-                <div class="role-title">② スタッフ操作モード</div>
-                <div class="role-desc">現場スタッフ用。待ち人数の加減算が可能です [cite: 10, 11]</div>
-            </div>
-        </button>
+        <div class="select-panel" onclick="goClientMode('staff')">
+            <div class="panel-title">② スタッフ操作モード</div>
+            <div class="panel-desc">現場スタッフ用画面。ここから人数の増減をリモート操作できます。</div>
+        </div>
     </div>
 
-    <div id="screen-client-display" class="screen" style="position: relative;">
-        <div class="monitor-display" style="padding: 55px 20px; background: rgba(255, 255, 255, 0.4); border-radius: 20px;">
-            <div style="font-size: 0.9rem; color: var(--text-sub); margin-bottom: 10px; letter-spacing: 0.05em;">現在の待ち時間</div>
-            <div class="huge-number" style="font-size: 4.2rem;"><span id="client-view-time">25</span><span style="font-size: 1.5rem; font-weight: 500;">分</span></div>
-            <div style="font-size: 1.1rem; color: var(--text-sub); margin-top: 10px;">およそ <span id="client-view-teams" style="color: var(--text-main); font-weight: 600;">5</span> 組待ち </div>
+    <div id="screen-display" class="screen" style="position: relative;">
+        <div class="monitor-block" style="padding: 50px 20px; background: #fff;">
+            <div style="font-size: 0.85rem; color: var(--text-sub); letter-spacing: 0.05em;">現在の待ち時間</div>
+            <div class="huge-time" style="font-size: 4.5rem; color: var(--accent-blue);"><span id="view-time">0</span><span style="font-size: 1.6rem; font-weight:500; margin-left: 2px;">分</span></div>
+            <div class="huge-sub" style="font-size: 1.15rem;">およそ <span id="view-teams" style="font-weight: 700;">0</span> 組待ち</div>
         </div>
-        <p style="font-size: 0.75rem; color: var(--text-sub); text-align: center; opacity: 0.6;">⚠️ ディスプレイはロックされています [cite: 31]</p>
+        <p class="lock-text">⚠️ 表示ロック中（画面をタップしても数字は変わりません）</p>
         
-        <div style="position: absolute; bottom: -30px; right: -20px; width: 40px; height: 40px; cursor: default;" onclick="exitClientMode()"></div>
+        <div class="secret-area" onclick="exitClientSession()"></div>
     </div>
 
-    <div id="screen-client-staff" class="screen">
-        <div class="status-badge"><span class="pulse-dot" style="background-color: var(--accent-color);"></span>スタッフ操作端末 [cite: 10]</div>
-        <h1>現場カウント入力</h1>
-        
-        <div class="monitor-display">
-            <div class="huge-number" style="font-size: 2.2rem;"><span id="staff-view-time">25</span>分</div>
-            <div style="color: var(--text-sub); font-size: 0.85rem;">現在の行列：<span id="staff-view-teams" style="color: var(--text-main); font-weight:600;">5</span> 組 [cite: 11]</div>
+    <div id="screen-staff" class="screen">
+        <div class="status-badge" style="color: var(--accent-blue);"><span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用</div>
+        <h1>リモートカウント制御</h1>
+
+        <div class="monitor-block">
+            <div class="huge-time" style="font-size: 2.6rem;"><span id="staff-time">0</span>分</div>
+            <div class="huge-sub">現在地：<span id="staff-teams">0</span> 組待機中</div>
         </div>
 
-        <div class="btn-row">
-            <button class="action-btn" onclick="adjustTeams(1)">+1人 (列に追加) [cite: 11]</button>
-            <button class="action-btn secondary" onclick="adjustTeams(-1)">-1人 (案内完了) [cite: 11]</button>
+        <div class="flex-row">
+            <button class="btn" onclick="sendRemoteAction(1)">+1人 (列に並んだ)</button>
+            <button class="btn secondary" onclick="sendRemoteAction(-1)">-1人 (案内完了)</button>
         </div>
-        <button class="action-btn secondary" onclick="exitClientMode()" style="margin-top: 20px; font-size: 0.8rem; padding: 10px;">切断して戻る</button>
+        <button class="btn secondary" onclick="exitClientSession()" style="margin-top: 24px; font-size: 0.8rem; padding: 10px;">切断して戻る</button>
     </div>
 
 </div>
 
 <script>
-    // システム一元管理データ（マスター）
-    let currentRole = null;
-    let systemData = {
-        teams: 5,
+    // グローバルオブジェクトと状態データ
+    let peer = null;
+    let masterRole = null; 
+    let correctPin = ""; 
+    
+    // 接続を管理するリスト・オブジェクト
+    let connectedClients = []; // 本部用：接続してきたクライアントのコネクション配列
+    let hostConnection = null; // 支端末用：本部へのコネクション
+
+    let state = {
+        teams: 0,
         pace: 5,
-        totalTime: 25
+        totalTime: 0
     };
 
-    // 画面切り替え
-    function navigateTo(screenId) {
+    // 画面遷移
+    function navigate(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
     }
 
-    // 1. ゲート画面での役割選択
+    function backToGate() {
+        if(peer) peer.destroy();
+        navigate('screen-gate');
+    }
+
+    // 1. 役割選択
     function selectRole(role) {
-        currentRole = role;
+        masterRole = role;
         if (role === 'admin') {
-            navigateTo('screen-admin-dashboard');
-            generateSecureAuth(); 
+            initAdminPeer();
         } else {
-            navigateTo('screen-client-setup');
+            navigate('screen-client-setup');
         }
     }
 
-    function goBack() {
-        navigateTo('screen-gate');
+    // 2. 本部管理者：PeerJSの初期化とホスト立ち上げ
+    function initAdminPeer() {
+        navigate('screen-admin');
+        const customId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
+        correctPin = String(Math.floor(1000 + Math.random() * 9000)); // 4桁のランダムPIN
+
+        document.getElementById('admin-info').innerHTML = 
+            `接続ID: <strong style="color:var(--text-main); font-size:1rem;">${customId}</strong><br>認証PIN: <strong style="color:var(--accent-blue); font-size:1rem;">${correctPin}</strong>`;
+
+        // サーバーを介さずシグナリングを行うための公衆PeerServerへ接続
+        peer = new Peer(customId);
+
+        peer.on('open', (id) => {
+            console.log('Host Peer ID open:', id);
+        });
+
+        // 支端末からのデータ接続要求を受け付ける
+        peer.on('connection', (conn) => {
+            conn.on('data', (data) => {
+                // クライアントからの最初の認証リクエスト処理
+                if (data.type === 'REQ_AUTH') {
+                    if (data.pin === correctPin) {
+                        conn.send({ type: 'AUTH_OK', state: state });
+                        connectedClients.push(conn); // 認証成功した端末のみ配信対象にする
+                    } else {
+                        conn.send({ type: 'AUTH_NG' });
+                    }
+                }
+                // 支端末（スタッフモード）からの加減算リクエスト処理
+                if (data.type === 'ACTION_ADJUST') {
+                    adjustMasterTeams(data.amount);
+                }
+            });
+
+            conn.on('close', () => {
+                connectedClients = connectedClients.filter(c => c.peer !== conn.peer);
+            });
+        });
     }
 
-    // 2. 本部のPIN・UUID発行（モックデータ生成） [cite: 16, 20]
-    function generateSecureAuth() {
-        const uuid = "cfg-" + Math.random().toString(36).substring(2, 6) + "-" + Math.random().toString(36).substring(2, 6);
-        const pin = Math.floor(1000 + Math.random() * 9000);
-        
-        document.getElementById('admin-pairing-info').innerHTML = `
-            認証PIN: <span style="color: var(--accent-color); font-weight: 700;">${pin}</span> | <span style="font-size:0.75rem; color:var(--text-sub);">UUID: ${uuid}</span>
-        `;
-    }
-
-    // 3. 支端末の認証同期処理 [cite: 21]
+    // 3. 支端末：本部へのPeerJS接続要求
     function connectToAdmin() {
-        const inputPin = document.getElementById('input-pin').value;
-        if(!inputPin) {
-            alert("本部画面に表示されているPINコードを入力してください。[cite: 21]");
+        const targetId = document.getElementById('input-peer-id').value.trim();
+        const pinVal = document.getElementById('input-pin').value.trim();
+
+        if (!targetId || !pinVal) {
+            alert("接続用IDとPINコードを両方とも入力してください。");
             return;
         }
-        navigateTo('screen-client-connected');
+
+        peer = new Peer();
+
+        peer.on('open', (id) => {
+            // 本部へデータチャネル接続を試みる
+            const conn = peer.connect(targetId);
+            hostConnection = conn;
+
+            conn.on('open', () => {
+                // 接続直後に、入力されたPINコードを載せて認証要求を送信
+                conn.send({ type: 'REQ_AUTH', pin: pinVal });
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'AUTH_OK') {
+                    state = data.state;
+                    updateUIColorsAndNumbers();
+                    navigate('screen-client-choices');
+                }
+                if (data.type === 'AUTH_NG') {
+                    alert("認証PINコードが一致しませんでした。");
+                    peer.destroy();
+                }
+                if (data.type === 'BROADCAST_SYNC') {
+                    state = data.state;
+                    updateUIColorsAndNumbers();
+                }
+            });
+
+            conn.on('close', () => {
+                alert("本部との接続が切断されました。");
+                location.reload();
+            });
+        });
+
+        peer.on('error', (err) => {
+            console.error(err);
+            alert("接続エラーが発生しました。IDが正しいかご確認ください。");
+        });
     }
 
-    // 4. 支端末の表示モード決定 [cite: 23]
-    function activateClientMode(mode) {
-        if(mode === 'display') {
-            navigateTo('screen-client-display');
+    // 4. 支端末の画面表示決定
+    function goClientMode(mode) {
+        if (mode === 'display') {
+            navigate('screen-display');
         } else {
-            navigateTo('screen-client-staff');
+            navigate('screen-staff');
         }
-        renderUI();
     }
 
-    // 5. カウント操作とシミュレーション同期 [cite: 26, 28]
-    function adjustTeams(amount) {
-        systemData.teams += amount;
-        if(systemData.teams < 0) systemData.teams = 0;
-        syncData();
+    // 5. 本部データ操作と、全接続端末への一斉プッシュ配信
+    function adjustMasterTeams(amount) {
+        state.teams += amount;
+        if (state.teams < 0) state.teams = 0;
+        recalculateTotal();
     }
 
-    function syncData() {
-        const paceInput = document.getElementById('admin-pace');
-        if(paceInput) {
-            systemData.pace = parseInt(paceInput.value) || 0;
+    function updatePace() {
+        const pInput = document.getElementById('admin-pace');
+        if (pInput) {
+            const val = parseInt(pInput.value);
+            if (!isNaN(val)) {
+                state.pace = val;
+                recalculateTotal();
+            }
         }
-        systemData.totalTime = systemData.teams * systemData.pace;
-        renderUI();
     }
 
-    function renderUI() {
-        const elements = {
-            'admin-time': systemData.totalTime,
-            'admin-teams': systemData.teams,
-            'client-view-time': systemData.totalTime,
-            'client-view-teams': systemData.teams,
-            'staff-view-time': systemData.totalTime,
-            'staff-view-teams': systemData.teams
+    function recalculateTotal() {
+        state.totalTime = state.teams * state.pace;
+        updateUIColorsAndNumbers();
+
+        // 接続されているすべての支端末へデータをリアルタイムで送信（同期）
+        if (masterRole === 'admin') {
+            connectedClients.forEach(conn => {
+                if (conn.open) {
+                    conn.send({ type: 'BROADCAST_SYNC', state: state });
+                }
+            });
+        }
+    }
+
+    // 6. スタッフ操作端末から本部へ、カウントの変更リクエストを送信
+    function sendRemoteAction(amount) {
+        if (hostConnection && hostConnection.open) {
+            hostConnection.send({ type: 'ACTION_ADJUST', amount: amount });
+        }
+    }
+
+    // 画面内の全オブジェクトへ最新データを反映
+    function updateUIColorsAndNumbers() {
+        const renderTargets = {
+            'admin-time': state.totalTime,
+            'admin-teams': state.teams,
+            'view-time': state.totalTime,
+            'view-teams': state.teams,
+            'staff-time': state.totalTime,
+            'staff-teams': state.teams
         };
 
-        for (let id in elements) {
-            let el = document.getElementById(id);
-            if(el) el.innerText = elements[id];
+        for (let elementId in renderTargets) {
+            let el = document.getElementById(elementId);
+            if (el) el.innerText = renderTargets[elementId];
         }
     }
 
-    function exitClientMode() {
-        if(confirm("セキュリティロックを解除して役割選択に戻りますか？ [cite: 31]")) {
-            navigateTo('screen-gate');
+    function exitClientSession() {
+        if (confirm("セッションを切断し、最初の選択画面に戻りますか？")) {
+            location.reload(); // 通信状態を安全にリセットするためリロードを実行
         }
     }
 </script>
