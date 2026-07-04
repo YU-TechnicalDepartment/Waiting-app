@@ -373,7 +373,8 @@
         .action-bar-bottom {
             margin-top: 24px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
         }
 
         /* クライアント接続リストUI */
@@ -617,6 +618,13 @@
                 </div>
             </div>
             <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
+                <div class="setting-label">💡 画面の常時点灯（スリープ防止）</div>
+                <div class="segmented-control">
+                    <button class="segment-btn" id="wakelock-admin-on" onclick="toggleWakeLock(true, 'admin')">ON</button>
+                    <button class="segment-btn active" id="wakelock-admin-off" onclick="toggleWakeLock(false, 'admin')">OFF</button>
+                </div>
+            </div>
+            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
                 <div class="setting-label">ロック解除パスワード</div>
                 <input type="text" id="admin-lock-password" class="form-input" value="1234" style="width: 140px; padding: 6px 10px; text-align: center;" onchange="updateLockPassword()">
             </div>
@@ -629,7 +637,8 @@
             </div>
             <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組の行列</div>
             
-            <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none;">
+            <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none; width:100%;">
+                <div></div>
                 <button class="btn secondary sm" onclick="openCustomPrompt('admin-control')">管理者画面に戻る</button>
             </div>
         </div>
@@ -706,13 +715,27 @@
         <p class="lock-text">表示ロック中</p>
         
         <div class="action-bar-bottom">
-            <button class="btn secondary sm" onclick="openCustomPrompt('choices')">モード変更</button>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; color: var(--text-sub);">
+                <span>💡 常時点灯</span>
+                <div class="segmented-control">
+                    <button class="segment-btn" id="wakelock-view-on" onclick="toggleWakeLock(true, 'view')">ON</button>
+                    <button class="segment-btn active" id="wakelock-view-off" onclick="toggleWakeLock(false, 'view')">OFF</button>
+                </div>
+            </div>
+            <button class="btn secondary sm" onclick="openCustomPrompt('choices')" style="width: auto;">モード変更</button>
         </div>
     </div>
 
     <div id="screen-staff" class="screen">
         <div class="status-badge" style="color: var(--accent-blue);"><span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用</div>
-        <div style="float: right;">
+        <div style="float: right; display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--text-sub);">
+                <span>💡 常時点灯</span>
+                <div class="segmented-control" style="padding: 2px;">
+                    <button class="segment-btn" id="wakelock-staff-on" style="padding: 4px 8px; font-size: 0.7rem;" onclick="toggleWakeLock(true, 'staff')">ON</button>
+                    <button class="segment-btn active" id="wakelock-staff-off" style="padding: 4px 8px; font-size: 0.7rem;" onclick="toggleWakeLock(false, 'staff')">OFF</button>
+                </div>
+            </div>
             <button class="btn secondary sm" onclick="returnToChoices()">モード変更</button>
         </div>
         <h1>リモートカウント制御</h1>
@@ -757,6 +780,9 @@
     let isAdminFullscreen = false;
     let clientNameCounter = 0; 
     
+    // ⚡ 自動スリープ防止（Wake Lock オブジェクト）保持用
+    let wakeLockObj = null;
+
     // スパム・多重起動負荷対策システム
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
@@ -790,16 +816,60 @@
                 }, 400);
             }
         }
+        // 🛡️ セキュリティ：起動時に開発者ツール防御システムを始動
+        startSecurityMonitor();
     });
 
     // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
+            releaseWakeLock(); // スリープ防止を安全に解除
             unregisterActiveAdmin();
             e.preventDefault();
             e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
         }
     });
+
+    // ⚡ スリープ防止（Wake Lock）の制御関数
+    async function toggleWakeLock(shouldLock, viewPrefix) {
+        // UIのアクティブボタン表示変更
+        document.getElementById(`wakelock-${viewPrefix}-on`).classList.toggle('active', shouldLock);
+        document.getElementById(`wakelock-${viewPrefix}-off`).classList.toggle('active', !shouldLock);
+
+        if (shouldLock) {
+            if ('wakeLock' in navigator) {
+                try {
+                    // 以前のロックがあれば一端解除
+                    if (wakeLockObj) await wakeLockObj.release();
+                    
+                    wakeLockObj = await navigator.wakeLock.request('screen');
+                    
+                    // タブの切り替えなどでロックが外れた場合の自動再取得設定
+                    wakeLockObj.addEventListener('release', () => {
+                        console.log('Wake Lock was released');
+                    });
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                    openCustomAlert("設定エラー", "お使いの端末・ブラウザが自動スリープ防止機能に対応していないか、またはバッテリー制限により拒否されました。");
+                    toggleWakeLock(false, viewPrefix);
+                }
+            } else {
+                openCustomAlert("非対応環境", "このブラウザまたは端末は、画面の常時点灯機能（Wake Lock）に対応していません。端末自体の設定で自動スリープをオフにしてください。");
+                toggleWakeLock(false, viewPrefix);
+            }
+        } else {
+            await releaseWakeLock();
+        }
+    }
+
+    async function releaseWakeLock() {
+        if (wakeLockObj) {
+            try {
+                await wakeLockObj.release();
+                wakeLockObj = null;
+            } catch(e){}
+        }
+    }
 
     function openCustomAlert(title, message) {
         const box = document.getElementById('custom-dialog-box');
@@ -882,6 +952,7 @@
         if (!isYes) return;
 
         if (currentDialogContext === 'reload') {
+            releaseWakeLock();
             unregisterActiveAdmin();
             location.reload();
         } else if (currentDialogContext === 'kick-confirm') {
@@ -970,6 +1041,7 @@
     }
 
     function backToGate() {
+        releaseWakeLock();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
@@ -1109,13 +1181,14 @@
                 conn.close();
             }
         });
+        releaseWakeLock();
         unregisterActiveAdmin();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
     }
 
-    // 🌟 2. 支端末接続（ぐるぐるローディング＆フォームロック完全実装版）
+    // 2. 支端末接続
     function connectToAdmin() {
         const targetId = document.getElementById('input-peer-id').value.trim();
         const pinVal = document.getElementById('input-pin').value.trim();
@@ -1125,19 +1198,17 @@
             return;
         }
 
-        // 🌟 接続処理開始に伴い、UIをロックして「ぐるぐる」をオンにする
         setConnectionLoadingState(true);
 
         peer = new Peer();
         
-        // シグナリングサーバーへの接続がタイムアウト等で失敗した場合のセーフティガード
         let timeoutGuard = setTimeout(() => {
             if (masterRole === 'client' && document.getElementById('screen-client-setup').classList.contains('active')) {
                 openCustomAlert("タイムアウト", "接続要求がタイムアウトしました。IDが正しいか、または本部の電波状況を確認してください。");
                 setConnectionLoadingState(false);
                 if(peer) peer.destroy();
             }
-        }, 8000); // 8秒応答がなければ自動解放
+        }, 8000);
 
         peer.on('open', () => {
             const conn = peer.connect(targetId);
@@ -1148,17 +1219,16 @@
             });
 
             conn.on('data', (data) => {
-                // 応答があったためガードを解除
                 clearTimeout(timeoutGuard);
 
                 if (data.type === 'AUTH_OK') {
-                    setConnectionLoadingState(false); // 解除
+                    setConnectionLoadingState(false);
                     state = data.state;
                     applyStateToUI();
                     navigate('screen-client-choices');
                 }
                 if (data.type === 'AUTH_NG') {
-                    setConnectionLoadingState(false); // 解除
+                    setConnectionLoadingState(false);
                     openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
                     peer.destroy();
                 }
@@ -1172,6 +1242,7 @@
                 if (data.type === 'KICKED_BY_ADMIN') {
                     openCustomAlert("切断のお知らせ", "本部管理者によって接続が切り離されました。");
                     setTimeout(() => {
+                        releaseWakeLock();
                         window.history.replaceState({}, document.title, window.location.pathname);
                         location.reload();
                     }, 3000);
@@ -1179,6 +1250,7 @@
                 if (data.type === 'ADMIN_CLOSED_FORCED') {
                     openCustomAlert("システム終了", "本部システムが終了したため、通信を安全に停止しました。");
                     setTimeout(() => {
+                        releaseWakeLock();
                         window.history.replaceState({}, document.title, window.location.pathname);
                         location.reload();
                     }, 3000);
@@ -1190,6 +1262,7 @@
                 setConnectionLoadingState(false);
                 openCustomAlert("切断検知", "本部との接続が切断されました。");
                 setTimeout(() => {
+                    releaseWakeLock();
                     window.history.replaceState({}, document.title, window.location.pathname);
                     location.reload();
                 }, 1500);
@@ -1198,12 +1271,11 @@
         
         peer.on('error', (err) => {
             clearTimeout(timeoutGuard);
-            setConnectionLoadingState(false); // エラー時はUIロックを解除
+            setConnectionLoadingState(false);
             openCustomAlert("接続エラー", "本部が見つかりません。IDを確認するか、通信環境をお確かめください。");
         });
     }
 
-    // 🌟 ローディング表示と入力を切り替えるヘルパー関数
     function setConnectionLoadingState(isLoading) {
         const btnConnect = document.getElementById('btn-establish-connection');
         const btnSpinner = document.getElementById('btn-connect-spinner');
@@ -1230,12 +1302,22 @@
     }
 
     function goClientMode(mode) {
-        if (mode === 'display') navigate('screen-display');
-        else navigate('screen-staff');
+        // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
+        releaseWakeLock().then(() => {
+            document.getElementById('wakelock-view-on').classList.remove('active');
+            document.getElementById('wakelock-view-off').classList.add('active');
+            document.getElementById('wakelock-staff-on').classList.remove('active');
+            document.getElementById('wakelock-staff-off').classList.add('active');
+            
+            if (mode === 'display') navigate('screen-display');
+            else navigate('screen-staff');
+        });
     }
 
     function returnToChoices() {
-        navigate('screen-client-choices');
+        releaseWakeLock().then(() => {
+            navigate('screen-client-choices');
+        });
     }
 
     // 3. 各種設定更新
@@ -1395,6 +1477,62 @@
             btn.innerText = "客用大画面表示に切替";
             applyStateToUI();
         }
+    }
+
+    // 🛡️ 5. セキュリティ：開発者ツール検知・防御・ロックシステム
+    function startSecurityMonitor() {
+        // A. キーボードショートカットのブロック (F12, Ctrl+Shift+I, J, C)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                (e.metaKey && e.altKey && (e.key === 'i' || e.key === 'j'))) {
+                e.preventDefault();
+                triggerSecurityAlert();
+            }
+        });
+
+        // B. 右クリックメニュー（検証を開く動線）の完全封印
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // C. ウィンドウのリサイズ幅監視（横や下からツールがニョキッと出てきた時の検知）
+        let threshold = 160;
+        setInterval(() => {
+            if (window.outerWidth - window.innerWidth > threshold || 
+                window.outerHeight - window.innerHeight > threshold) {
+                triggerSecurityAlert();
+            }
+        }, 1500);
+
+        // D. 最強の深層防衛：debugger割り込み時間計測（開発者ツールが開いていると処理が一瞬停止する性質を利用）
+        setInterval(() => {
+            let start = performance.now();
+            debugger; // 開発者ツールが閉じている時は一瞬でスルーされます
+            let end = performance.now();
+            if (end - start > 100) {
+                triggerSecurityAlert();
+            }
+        }, 1000);
+    }
+
+    function triggerSecurityAlert() {
+        const overlay = document.getElementById('custom-dialog-overlay');
+        const box = document.getElementById('custom-dialog-box');
+        
+        // ダイアログ層がすでにアクティブかつ警告中なら多重表示しない
+        if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
+
+        box.innerHTML = `
+            <div id="sec-warning-flag" style="display:none;"></div>
+            <div class="dialog-title" style="color:var(--accent-red);">開発者ツールを検知しました</div>
+            <div class="dialog-message" style="text-align:left; font-weight:600;">
+                本システムのWEB上でのコード解析はお控えいただきますよう、お願いいたします。コードはオープンソースで公開しております。<br><br>
+                速やかに開発者ツールを閉じ、ページを再読み込みしてください。
+            </div>
+            <button class="btn danger" onclick="location.reload()">再読み込み</button>
+        `;
+        overlay.classList.add('active');
     }
 </script>
 
