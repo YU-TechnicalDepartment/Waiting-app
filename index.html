@@ -710,7 +710,7 @@
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">およそ <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
         </div>
         <p class="lock-text">表示ロック中</p>
         
@@ -729,6 +729,13 @@
     <div id="screen-staff" class="screen">
         <div class="status-badge" style="color: var(--accent-blue);"><span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用</div>
         <div style="float: right; display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--text-sub);">
+                <span>常時点灯</span>
+                <div class="segmented-control" style="padding: 2px;">
+                    <button class="segment-btn" id="wakelock-staff-on" style="padding: 4px 8px; font-size: 0.7rem;" onclick="toggleWakeLock(true, 'staff')">ON</button>
+                    <button class="segment-btn active" id="wakelock-staff-off" style="padding: 4px 8px; font-size: 0.7rem;" onclick="toggleWakeLock(false, 'staff')">OFF</button>
+                </div>
+            </div>
             <button class="btn secondary sm" onclick="returnToChoices()">モード変更</button>
         </div>
         <h1>リモートカウント制御</h1>
