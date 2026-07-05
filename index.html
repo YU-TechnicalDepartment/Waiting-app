@@ -727,14 +727,20 @@
     </div>
 
     <div id="screen-staff" class="screen">
-        <div class="status-badge" style="color: var(--accent-blue);"><span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用</div>
+        <div class="status-badge" style="color: var(--accent-blue);">
+            <span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用
+        </div>
+        
         <div style="float: right; display: flex; gap: 8px; align-items: center;">
             <button class="btn secondary sm" onclick="returnToChoices()">モード変更</button>
         </div>
+
         <h1>リモートカウント制御</h1>
 
         <div class="monitor-block">
-            <div class="huge-time"><span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span></div>
+            <div class="huge-time">
+                <span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span>
+            </div>
             <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 組待ち</div>
         </div>
 
