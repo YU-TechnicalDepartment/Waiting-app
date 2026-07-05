@@ -1301,15 +1301,21 @@
     }
 
     function goClientMode(mode) {
-        // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
-        releaseWakeLock().then(() => {
-            document.getElementById('wakelock-view-on').classList.remove('active');
-            document.getElementById('wakelock-view-off').classList.add('active');
-            document.getElementById('wakelock-staff-on').classList.remove('active');
-            document.getElementById('wakelock-staff-off').classList.add('active');
-            
-            if (mode === 'display') navigate('screen-display');
-            else navigate('screen-staff');
+    // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
+    releaseWakeLock().then(() => {
+        // 要素が存在する場合のみクラスを操作するように安全対策を追加
+        const wlViewOn = document.getElementById('wakelock-view-on');
+        const wlViewOff = document.getElementById('wakelock-view-off');
+        const wlStaffOn = document.getElementById('wakelock-staff-on');
+        const wlStaffOff = document.getElementById('wakelock-staff-off');
+
+        if (wlViewOn) wlViewOn.classList.remove('active');
+        if (wlViewOff) wlViewOff.classList.add('active');
+        if (wlStaffOn) wlStaffOn.classList.remove('active');
+        if (wlStaffOff) wlStaffOff.classList.add('active');
+
+        if (mode === 'display') navigate('screen-display');
+        else navigate('screen-staff');
         });
     }
 
