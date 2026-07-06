@@ -1520,7 +1520,7 @@
         }, 1500);
 
         // D. 最強の深層防衛：debugger割り込み時間計測（開発者ツールが開いていると処理が一瞬停止する性質を利用）
-        // setInterval(() => {
+        setInterval(() => {
             let start = performance.now();
             debugger; // 開発者ツールが閉じている時は一瞬でスルーされます
             let end = performance.now();
