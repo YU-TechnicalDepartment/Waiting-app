@@ -1107,8 +1107,17 @@
         document.getElementById('admin-info').innerHTML = 
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
 
-        peer = new Peer(currentAdminId);
-
+        peer = new Peer(currentAdminId, {
+            host: 'peerjs.yu1000-scratch.workers.dev', // ⚠️「https://」や最後の「/」は入れないでください
+            port: 443,
+            path: '/',
+            secure: true,
+            config: {
+                // 端末同士の通信のきっかけを作るためのGoogleの無料STUNサーバー
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            }
+        });
+        
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
