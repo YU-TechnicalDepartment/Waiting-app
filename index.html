@@ -786,11 +786,37 @@
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
-    // 📈 統計情報収集用の変数
+    // 📈 統計情報収集用の変数と関数
     let statsStartTime = null;
     let statsMaxTeams = 0;
-    // ⚠️ ここに先ほどコピーしたGoogleのウェブアプリURLを貼り付け
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlyzmQNiysSREZFpc7dRr6U4D5PtMnQwMKuB9Cpfo7otnC3Abdq8oP0Sb9luP3Rp4w/exec";
+
+    // 📈 統計データを確実に送信し、完了を待つ関数
+    async function sendStatisticsToGAS() {
+        if (!statsStartTime || !currentAdminId) return;
+
+        const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
+        const reportData = {
+            roomId: currentAdminId,
+            totalMinutes: durationMinutes,
+            maxTeams: statsMaxTeams
+        };
+
+        console.log("GASへ統計データを送信中...", reportData);
+
+        try {
+            // fetchの完了を待つことで、非同期処理が途中で切断されるのを防ぎます
+            await fetch(GAS_WEBAPP_URL, {
+                method: 'POST',
+                body: JSON.stringify(reportData),
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors' // クロスドメイン制限によるエラー中断を防止
+            });
+            console.log("統計データの送信処理が完了しました。");
+        } catch (err) {
+            console.error("統計データの送信に失敗しました:", err);
+        }
+    }
 
     let state = {
         teams: 0,
@@ -825,23 +851,21 @@
         startSecurityMonitor();
     });
 
-    // 誤操作による離脱・リロードの防止プロテクター
+    // 誤操作による離脱・リロードの防止プロテクター（マージ・整理済み）
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
-            if (masterRole === 'admin') {
-                sendStatisticsToGAS(); // 📈 画面が閉じられたら送信
+            if (masterRole === 'admin' && statsStartTime) {
+                // タブ閉じやリロード時は待機できないため、プレーンテキスト形式のBlobで即時送信
+                const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
+                const reportData = JSON.stringify({
+                    roomId: currentAdminId,
+                    totalMinutes: durationMinutes,
+                    maxTeams: statsMaxTeams
+                });
+                const blob = new Blob([reportData], { type: 'text/plain' });
+                navigator.sendBeacon(GAS_WEBAPP_URL, blob);
             }
             releaseWakeLock(); 
-            unregisterActiveAdmin();
-            e.preventDefault();
-            e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
-        }
-    });
-    
-    // 誤操作による離脱・リロードの防止プロテクター
-    window.addEventListener('beforeunload', (e) => {
-        if (masterRole) {
-            releaseWakeLock(); // スリープ防止を安全に解除
             unregisterActiveAdmin();
             e.preventDefault();
             e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
@@ -1196,10 +1220,10 @@
         }
     }
 
-    function executeCloseAdminMaster() {
-        // 📈 統計用：管理者が手動で終了ボタンを押した時にGASへデータを送信
+    // 修正：asyncを付与して、GASへの送信完了(await)を待ってから画面をリロードするように変更
+    async function executeCloseAdminMaster() {
         if (masterRole === 'admin') {
-            sendStatisticsToGAS(); 
+            await sendStatisticsToGAS(); 
         }
         
         connectedClients.forEach(conn => {
@@ -1329,21 +1353,20 @@
     }
 
     function goClientMode(mode) {
-    // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
-    releaseWakeLock().then(() => {
-        // 要素が存在する場合のみクラスを操作するように安全対策を追加
-        const wlViewOn = document.getElementById('wakelock-view-on');
-        const wlViewOff = document.getElementById('wakelock-view-off');
-        const wlStaffOn = document.getElementById('wakelock-staff-on');
-        const wlStaffOff = document.getElementById('wakelock-staff-off');
+        // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
+        releaseWakeLock().then(() => {
+            const wlViewOn = document.getElementById('wakelock-view-on');
+            const wlViewOff = document.getElementById('wakelock-view-off');
+            const wlStaffOn = document.getElementById('wakelock-staff-on');
+            const wlStaffOff = document.getElementById('wakelock-staff-off');
 
-        if (wlViewOn) wlViewOn.classList.remove('active');
-        if (wlViewOff) wlViewOff.classList.add('active');
-        if (wlStaffOn) wlStaffOn.classList.remove('active');
-        if (wlStaffOff) wlStaffOff.classList.add('active');
+            if (wlViewOn) wlViewOn.classList.remove('active');
+            if (wlViewOff) wlViewOff.classList.add('active');
+            if (wlStaffOn) wlStaffOn.classList.remove('active');
+            if (wlStaffOff) wlStaffOff.classList.add('active');
 
-        if (mode === 'display') navigate('screen-display');
-        else navigate('screen-staff');
+            if (mode === 'display') navigate('screen-display');
+            else navigate('screen-staff');
         });
     }
 
@@ -1544,10 +1567,10 @@
             }
         }, 1500);
 
-        // D. 最強の深層防衛：debugger割り込み時間計測（開発者ツールが開いていると処理が一瞬停止する性質を利用）
+        // D. 最強の深層防衛：debugger割り込み時間計測
         setInterval(() => {
             let start = performance.now();
-            debugger; // 開発者ツールが閉じている時は一瞬でスルーされます
+            debugger; 
             let end = performance.now();
             if (end - start > 100) {
                 triggerSecurityAlert();
@@ -1575,33 +1598,6 @@
             <button class="btn danger" onclick="location.reload()">再読み込み</button>
         `;
         overlay.classList.add('active');
-    }
-    
-    // 📈 統計データをGAS経由でスプレッドシートに送信する関数
-    function sendStatisticsToGAS() {
-        if (!statsStartTime || !currentAdminId) return;
-
-        // 使用した時間（分）を計算
-        const durationMinutes = Math.round((Date.now() - statsStartTime) / 1000 / 60);
-
-        const reportData = {
-            roomId: currentAdminId,
-            totalMinutes: durationMinutes,
-            maxTeams: statsMaxTeams
-        };
-
-        // ページが閉じる瞬間でも確実に送信を届かせるため、navigator.sendBeacon または fetch の keepalive を使用します
-        if (navigator.sendBeacon) {
-            const blob = new Blob([JSON.stringify(reportData)], { type: 'application/json' });
-            navigator.sendBeacon(GAS_WEBAPP_URL, blob);
-        } else {
-            fetch(GAS_WEBAPP_URL, {
-                method: 'POST',
-                body: JSON.stringify(reportData),
-                headers: { 'Content-Type': 'application/json' },
-                keepalive: true
-            });
-        }
     }
 </script>
 
