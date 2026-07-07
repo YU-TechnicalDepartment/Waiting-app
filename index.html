@@ -1489,6 +1489,11 @@
         if (state.teams > statsMaxTeams) {
             statsMaxTeams = state.teams;
         }
+        
+        // 📈 統計用：分単位直接操作時も、過去最高の待ち時間（分）を更新したら記録
+        if (state.totalTime > statsMaxMinutes) {
+            statsMaxMinutes = state.totalTime;
+        }
 
         applyStateToUI();
         broadcastToAll();
