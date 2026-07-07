@@ -526,6 +526,17 @@
             line-height: 1.5;
             word-break: break-all;
         }
+        /* サーバー保護制限用の無効化スタイル */
+        .select-panel.disabled-admin {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: var(--border-soft) !important;
+            box-shadow: none !important;
+        }
+        .select-panel.disabled-admin:hover {
+            border-color: var(--border-soft) !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 <body>
@@ -536,7 +547,7 @@
         <h1>リアルタイム待ち時間管理</h1>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
-        <div class="select-panel" onclick="selectRole('admin')">
+        <div class="select-panel" id="btn-admin-start" onclick="selectRole('admin')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
             </div>
@@ -604,7 +615,7 @@
                 </div>
             </div>
             <div class="setting-row">
-                <div class="setting-label">「待ち人数」の表示</div>
+                <div class="setting-label">「待ち組数」の表示</div>
                 <div class="segmented-control">
                     <button class="segment-btn active" id="teams-on" onclick="changeStateSetting('showTeams', true)">表示する</button>
                     <button class="segment-btn" id="teams-off" onclick="changeStateSetting('showTeams', false)">隠す</button>
@@ -613,13 +624,9 @@
             <div class="setting-row">
                 <div class="setting-label">現場の操作方式</div>
                 <div class="segmented-control">
-                    <button class="segment-btn active" id="ctrl-pace" onclick="changeStateSetting('controlMode', 'pace')">1人あたりの時間設定</button>
+                    <button class="segment-btn active" id="ctrl-pace" onclick="changeStateSetting('controlMode', 'pace')">1組あたりの時間設定</button>
                     <button class="segment-btn" id="ctrl-direct" onclick="changeStateSetting('controlMode', 'direct')">分単位を直接加減</button>
                 </div>
-            </div>
-            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
-                <div class="setting-label">最大同時接続端末数 (サーバー保護)</div>
-                <input type="number" id="admin-max-connections" class="form-input" value="5" min="1" style="width: 80px; padding: 6px 10px; text-align: center;" onchange="updateMaxConnections()">
             </div>
             <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
                 <div class="setting-label">画面の常時点灯（スリープ防止）</div>
@@ -639,7 +646,7 @@
             <div class="huge-time" id="dom-admin-time-box">
                 <span class="side-text" id="txt-about-admin">約</span><span id="admin-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 人待ち</div>
+            <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組待ち</div>
             
             <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none; width:100%;">
                 <div></div>
@@ -649,12 +656,12 @@
 
         <div id="panel-pace-control">
             <div class="form-group">
-                <label class="form-label">1人あたりの所要時間 (分)</label>
+                <label class="form-label">1組あたりの所要時間 (分)</label>
                 <input type="number" id="admin-pace" class="form-input" value="5" onchange="updatePace()">
             </div>
             <div class="flex-row">
-                <button class="btn" onclick="adjustMasterTeams(1)">+1人 追加</button>
-                <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1人 消化</button>
+                <button class="btn" onclick="adjustMasterTeams(1)">+1組 追加</button>
+                <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1組 消化</button>
             </div>
         </div>
 
@@ -714,7 +721,7 @@
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 人待ち</div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
         </div>
         <p class="lock-text">表示ロック中</p>
         
@@ -745,13 +752,13 @@
             <div class="huge-time">
                 <span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 人待ち</div>
+            <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 組待ち</div>
         </div>
 
         <div id="client-pace-box">
             <div class="flex-row">
-                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1人 追加</button>
-                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1人 消化</button>
+                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1組 追加</button>
+                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1組 消化</button>
             </div>
         </div>
 
@@ -792,7 +799,7 @@
 
     // 📈 統計情報収集用の変数と関数
     let statsStartTime = null;
-    let statsMaxTeams = 0;
+    let statsMaxMinutes = 0;
     let isStatsSent = false;
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlyzmQNiysSREZFpc7dRr6U4D5PtMnQwMKuB9Cpfo7otnC3Abdq8oP0Sb9luP3Rp4w/exec";
 
@@ -805,7 +812,7 @@
         const reportData = {
             roomId: currentAdminId,
             totalMinutes: durationMinutes,
-            maxTeams: statsMaxTeams
+            maxTeams: statsMaxMinutes
         };
 
         console.log("GASへ統計データを送信中...", reportData);
@@ -831,15 +838,31 @@
         showAbout: true,      
         showTeams: true,      
         controlMode: 'pace',
-        lockPassword: '1234',
-        maxConnections: 5
+        lockPassword: '1234'
     };
 
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
     // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
+    // 🛡️ サーバー保護のための本部同時起動数リアルタイム監視
+    function updateAdminStartButtonState() {
+        const btn = document.getElementById('btn-admin-start');
+        if (!btn) return;
+        
+        const currentCount = getActiveAdminCount();
+        if (currentCount >= 3) {
+            btn.classList.add('disabled-admin');
+        } else {
+            btn.classList.remove('disabled-admin');
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+        // 定期的に本部数をチェックして、上限を下回ったら自動的に作れるようにする
+        updateAdminStartButtonState();
+        setInterval(updateAdminStartButtonState, 2000);
+
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
@@ -868,7 +891,7 @@
                 const reportData = JSON.stringify({
                     roomId: currentAdminId,
                     totalMinutes: durationMinutes,
-                    maxTeams: statsMaxTeams
+                    maxTeams: statsMaxMinutes
                 });
                 const blob = new Blob([reportData], { type: 'text/plain' });
                 navigator.sendBeacon(GAS_WEBAPP_URL, blob);
@@ -1154,8 +1177,13 @@
 
     function selectRole(role) {
         if (role === 'admin') {
+            const btn = document.getElementById('btn-admin-start');
+            if (btn && btn.classList.contains('disabled-admin')) {
+                openCustomAlert("サーバー保護制限", "パブリックサーバー保護のため、現在この端末で作成できる本部数の上限（3部屋）に達しています。既存の本部タブを閉じて枠が空くまでお待ちください。");
+                return;
+            }
             if (getActiveAdminCount() >= 3) {
-                openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+                openCustomAlert("サーバー保護制限", "パブリックサーバー保護のため、現在この端末で作成できる本部数の上限（3部屋）に達しています。既存の本部タブを閉じて枠が空くまでお待ちください。");
                 return;
             }
             registerActiveAdmin();
@@ -1185,13 +1213,6 @@
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
-                    // 🛡️ 同時接続数の超過チェック
-                    if (connectedClients.length >= state.maxConnections) {
-                        conn.send({ type: 'AUTH_OVERFLOW' });
-                        setTimeout(() => conn.close(), 500);
-                        return;
-                    }
-
                     if (data.pin === correctPin) {
                         clientNameCounter++;
                         conn.displayName = `端末 - ${clientNameCounter}`;
@@ -1316,18 +1337,13 @@
                     // 本部と直接のP2P接続（DataConnection）が確立されたため、
                     // 支端末側のPeerJSをシグナリングサーバーから切断して負荷をゼロにします。
                     if (peer && typeof peer.disconnect === 'function') {
-                        console.log("支端末：P2P確立に成功したため、パブリックサーバーから通信を切断しました（負荷削減）。");
+                        console.log("支端末：P2P確立成功。パブリックサーバーから切断しました。");
                         peer.disconnect();
                     }
                 }
                 if (data.type === 'AUTH_NG') {
                     setConnectionLoadingState(false);
                     openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
-                    peer.destroy();
-                }
-                if (data.type === 'AUTH_OVERFLOW') {
-                    setConnectionLoadingState(false);
-                    openCustomAlert("接続拒否", "本部の同時接続端末数が上限に達しているため、接続できませんでした。時間を置いてお試しいただくか、本部の制限設定を変更してください。");
                     peer.destroy();
                 }
                 if (data.type === 'BROADCAST_SYNC') {
@@ -1453,10 +1469,7 @@
         state.teams += amount;
         if (state.teams < 0) state.teams = 0;
         
-        // 📈 統計用：過去最高の待ち組数を更新したら記録
-        if (state.teams > statsMaxTeams) {
-            statsMaxTeams = state.teams;
-        }
+
         
         recalculateTotal();
     }
@@ -1492,21 +1505,16 @@
         }
     }
 
-    function updateMaxConnections() {
-        const cInput = document.getElementById('admin-max-connections');
-        if (cInput) {
-            const val = parseInt(cInput.value);
-            if (!isNaN(val) && val > 0) {
-                state.maxConnections = val;
-                broadcastToAll();
-            }
-        }
-    }
-
     function recalculateTotal() {
         if (state.controlMode === 'pace') {
             state.totalTime = state.teams * state.pace;
         }
+        
+        // 📈 統計用：過去最高の待ち時間（分）を更新したら記録
+        if (state.totalTime > statsMaxMinutes) {
+            statsMaxMinutes = state.totalTime;
+        }
+
         applyStateToUI();
         broadcastToAll();
     }
@@ -1550,11 +1558,6 @@
         document.getElementById('box-admin-teams').style.display = teamsDisplay;
         document.getElementById('box-view-teams').style.display = teamsDisplay;
         document.getElementById('box-staff-teams').style.display = teamsDisplay;
-
-        const cInput = document.getElementById('admin-max-connections');
-        if (cInput && masterRole !== 'admin') {
-            cInput.value = state.maxConnections;
-        }
 
         const isPace = (state.controlMode === 'pace');
         document.getElementById('panel-pace-control').style.display = isPace ? "block" : "none";
