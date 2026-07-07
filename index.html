@@ -604,7 +604,7 @@
                 </div>
             </div>
             <div class="setting-row">
-                <div class="setting-label">「待ち組数」の表示</div>
+                <div class="setting-label">「待ち人数」の表示</div>
                 <div class="segmented-control">
                     <button class="segment-btn active" id="teams-on" onclick="changeStateSetting('showTeams', true)">表示する</button>
                     <button class="segment-btn" id="teams-off" onclick="changeStateSetting('showTeams', false)">隠す</button>
@@ -613,9 +613,13 @@
             <div class="setting-row">
                 <div class="setting-label">現場の操作方式</div>
                 <div class="segmented-control">
-                    <button class="segment-btn active" id="ctrl-pace" onclick="changeStateSetting('controlMode', 'pace')">1組あたりの時間設定</button>
+                    <button class="segment-btn active" id="ctrl-pace" onclick="changeStateSetting('controlMode', 'pace')">1人あたりの時間設定</button>
                     <button class="segment-btn" id="ctrl-direct" onclick="changeStateSetting('controlMode', 'direct')">分単位を直接加減</button>
                 </div>
+            </div>
+            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
+                <div class="setting-label">最大同時接続端末数 (サーバー保護)</div>
+                <input type="number" id="admin-max-connections" class="form-input" value="5" min="1" style="width: 80px; padding: 6px 10px; text-align: center;" onchange="updateMaxConnections()">
             </div>
             <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
                 <div class="setting-label">画面の常時点灯（スリープ防止）</div>
@@ -635,7 +639,7 @@
             <div class="huge-time" id="dom-admin-time-box">
                 <span class="side-text" id="txt-about-admin">約</span><span id="admin-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組待ち</div>
+            <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 人待ち</div>
             
             <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none; width:100%;">
                 <div></div>
@@ -645,12 +649,12 @@
 
         <div id="panel-pace-control">
             <div class="form-group">
-                <label class="form-label">1組あたりの所要時間 (分)</label>
+                <label class="form-label">1人あたりの所要時間 (分)</label>
                 <input type="number" id="admin-pace" class="form-input" value="5" onchange="updatePace()">
             </div>
             <div class="flex-row">
-                <button class="btn" onclick="adjustMasterTeams(1)">+1組 追加</button>
-                <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1組 消化</button>
+                <button class="btn" onclick="adjustMasterTeams(1)">+1人 追加</button>
+                <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1人 消化</button>
             </div>
         </div>
 
@@ -710,7 +714,7 @@
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 人待ち</div>
         </div>
         <p class="lock-text">表示ロック中</p>
         
@@ -741,13 +745,13 @@
             <div class="huge-time">
                 <span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 組待ち</div>
+            <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 人待ち</div>
         </div>
 
         <div id="client-pace-box">
             <div class="flex-row">
-                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1組 追加</button>
-                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1組 消化</button>
+                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1人 追加</button>
+                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1人 消化</button>
             </div>
         </div>
 
@@ -827,7 +831,8 @@
         showAbout: true,      
         showTeams: true,      
         controlMode: 'pace',
-        lockPassword: '1234'
+        lockPassword: '1234',
+        maxConnections: 5
     };
 
     let currentDialogContext = null;
@@ -1180,6 +1185,13 @@
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
+                    // 🛡️ 同時接続数の超過チェック
+                    if (connectedClients.length >= state.maxConnections) {
+                        conn.send({ type: 'AUTH_OVERFLOW' });
+                        setTimeout(() => conn.close(), 500);
+                        return;
+                    }
+
                     if (data.pin === correctPin) {
                         clientNameCounter++;
                         conn.displayName = `端末 - ${clientNameCounter}`;
@@ -1299,10 +1311,23 @@
                     state = data.state;
                     applyStateToUI();
                     navigate('screen-client-choices');
+                    
+                    // 🔌【パブリックサーバーからの即時切断】
+                    // 本部と直接のP2P接続（DataConnection）が確立されたため、
+                    // 支端末側のPeerJSをシグナリングサーバーから切断して負荷をゼロにします。
+                    if (peer && typeof peer.disconnect === 'function') {
+                        console.log("支端末：P2P確立に成功したため、パブリックサーバーから通信を切断しました（負荷削減）。");
+                        peer.disconnect();
+                    }
                 }
                 if (data.type === 'AUTH_NG') {
                     setConnectionLoadingState(false);
                     openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
+                    peer.destroy();
+                }
+                if (data.type === 'AUTH_OVERFLOW') {
+                    setConnectionLoadingState(false);
+                    openCustomAlert("接続拒否", "本部の同時接続端末数が上限に達しているため、接続できませんでした。時間を置いてお試しいただくか、本部の制限設定を変更してください。");
                     peer.destroy();
                 }
                 if (data.type === 'BROADCAST_SYNC') {
@@ -1467,6 +1492,17 @@
         }
     }
 
+    function updateMaxConnections() {
+        const cInput = document.getElementById('admin-max-connections');
+        if (cInput) {
+            const val = parseInt(cInput.value);
+            if (!isNaN(val) && val > 0) {
+                state.maxConnections = val;
+                broadcastToAll();
+            }
+        }
+    }
+
     function recalculateTotal() {
         if (state.controlMode === 'pace') {
             state.totalTime = state.teams * state.pace;
@@ -1514,6 +1550,11 @@
         document.getElementById('box-admin-teams').style.display = teamsDisplay;
         document.getElementById('box-view-teams').style.display = teamsDisplay;
         document.getElementById('box-staff-teams').style.display = teamsDisplay;
+
+        const cInput = document.getElementById('admin-max-connections');
+        if (cInput && masterRole !== 'admin') {
+            cInput.value = state.maxConnections;
+        }
 
         const isPace = (state.controlMode === 'pace');
         document.getElementById('panel-pace-control').style.display = isPace ? "block" : "none";
