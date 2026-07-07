@@ -789,11 +789,13 @@
     // 📈 統計情報収集用の変数と関数
     let statsStartTime = null;
     let statsMaxTeams = 0;
+    let isStatsSent = false;
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlyzmQNiysSREZFpc7dRr6U4D5PtMnQwMKuB9Cpfo7otnC3Abdq8oP0Sb9luP3Rp4w/exec";
 
     // 📈 統計データを確実に送信し、完了を待つ関数
     async function sendStatisticsToGAS() {
-        if (!statsStartTime || !currentAdminId) return;
+        if (!statsStartTime || !currentAdminId || isStatsSent) return;
+        isStatsSent = true;
 
         const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
         const reportData = {
@@ -854,7 +856,8 @@
     // 誤操作による離脱・リロードの防止プロテクター（マージ・整理済み）
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
-            if (masterRole === 'admin' && statsStartTime) {
+            if (masterRole === 'admin' && statsStartTime && !isStatsSent) {
+                isStatsSent = true;
                 // タブ閉じやリロード時は待機できないため、プレーンテキスト形式のBlobで即時送信
                 const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
                 const reportData = JSON.stringify({
@@ -990,8 +993,25 @@
     }
 
     function handleCustomConfirmResult(isYes) {
+        if (!isYes) {
+            closeCustomDialog();
+            return;
+        }
+
+        if (currentDialogContext === 'close-admin') {
+            // ボタンを無効化して多重クリックを完全に防御
+            const dialogBox = document.getElementById('custom-dialog-box');
+            const buttons = dialogBox.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+            const primaryBtn = dialogBox.querySelector('button:not(.secondary)');
+            if (primaryBtn) primaryBtn.innerText = "終了処理中...";
+            
+            // クローズ処理を実効（非同期完了後に中段でダイアログが閉じられます）
+            executeCloseAdminMaster();
+            return;
+        }
+
         closeCustomDialog();
-        if (!isYes) return;
 
         if (currentDialogContext === 'reload') {
             releaseWakeLock();
@@ -1086,6 +1106,7 @@
         releaseWakeLock();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
+        closeCustomDialog();
         location.reload();
     }
 
@@ -1236,6 +1257,7 @@
         unregisterActiveAdmin();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
+        closeCustomDialog();
         location.reload();
     }
 
@@ -1417,6 +1439,19 @@
     function adjustDirectMinutes(amount) {
         state.totalTime += amount;
         if (state.totalTime < 0) state.totalTime = 0;
+        
+        // 🛠️ 分単位直接操作時も、設定されたペースから「組数」を逆算して連動させます
+        if (state.pace > 0) {
+            state.teams = Math.ceil(state.totalTime / state.pace);
+        } else {
+            state.teams = 0;
+        }
+        
+        // 📈 統計用：最大待ち組数の更新チェック
+        if (state.teams > statsMaxTeams) {
+            statsMaxTeams = state.teams;
+        }
+
         applyStateToUI();
         broadcastToAll();
     }
