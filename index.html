@@ -786,6 +786,12 @@
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
+    // 📈 統計情報収集用の変数
+    let statsStartTime = null;
+    let statsMaxTeams = 0;
+    // ⚠️ ここに先ほどコピーしたGoogleのウェブアプリURLを貼り付け
+    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlyzmQNiysSREZFpc7dRr6U4D5PtMnQwMKuB9Cpfo7otnC3Abdq8oP0Sb9luP3Rp4w/exec";
+
     let state = {
         teams: 0,
         pace: 5,
@@ -819,6 +825,19 @@
         startSecurityMonitor();
     });
 
+    // 誤操作による離脱・リロードの防止プロテクター
+    window.addEventListener('beforeunload', (e) => {
+        if (masterRole) {
+            if (masterRole === 'admin') {
+                sendStatisticsToGAS(); // 📈 画面が閉じられたら送信
+            }
+            releaseWakeLock(); 
+            unregisterActiveAdmin();
+            e.preventDefault();
+            e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
+        }
+    });
+    
     // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
@@ -1103,6 +1122,10 @@
         navigate('screen-admin');
         currentAdminId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
         correctPin = String(Math.floor(1000 + Math.random() * 9000));
+        
+        // 📈 統計用：本部が立ち上がった時間を記録
+        statsStartTime = Date.now();
+        statsMaxTeams = 0;
 
         document.getElementById('admin-info').innerHTML = 
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
@@ -1174,6 +1197,11 @@
     }
 
     function executeCloseAdminMaster() {
+        // 📈 統計用：管理者が手動で終了ボタンを押した時にGASへデータを送信
+        if (masterRole === 'admin') {
+            sendStatisticsToGAS(); 
+        }
+        
         connectedClients.forEach(conn => {
             if (conn.open) {
                 conn.send({ type: 'ADMIN_CLOSED_FORCED' });
@@ -1354,6 +1382,12 @@
     function adjustMasterTeams(amount) {
         state.teams += amount;
         if (state.teams < 0) state.teams = 0;
+        
+        // 📈 統計用：過去最高の待ち組数を更新したら記録
+        if (state.teams > statsMaxTeams) {
+            statsMaxTeams = state.teams;
+        }
+        
         recalculateTotal();
     }
 
@@ -1538,6 +1572,33 @@
             <button class="btn danger" onclick="location.reload()">再読み込み</button>
         `;
         overlay.classList.add('active');
+    }
+    
+    // 📈 統計データをGAS経由でスプレッドシートに送信する関数
+    function sendStatisticsToGAS() {
+        if (!statsStartTime || !currentAdminId) return;
+
+        // 使用した時間（分）を計算
+        const durationMinutes = Math.round((Date.now() - statsStartTime) / 1000 / 60);
+
+        const reportData = {
+            roomId: currentAdminId,
+            totalMinutes: durationMinutes,
+            maxTeams: statsMaxTeams
+        };
+
+        // ページが閉じる瞬間でも確実に送信を届かせるため、navigator.sendBeacon または fetch の keepalive を使用します
+        if (navigator.sendBeacon) {
+            const blob = new Blob([JSON.stringify(reportData)], { type: 'application/json' });
+            navigator.sendBeacon(GAS_WEBAPP_URL, blob);
+        } else {
+            fetch(GAS_WEBAPP_URL, {
+                method: 'POST',
+                body: JSON.stringify(reportData),
+                headers: { 'Content-Type': 'application/json' },
+                keepalive: true
+            });
+        }
     }
 </script>
 
