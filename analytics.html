@@ -236,9 +236,9 @@
             <table>
                 <thead>
                     <tr>
-                        <th>履歴表示 (インデックス)</th>
-                        <th>合計稼働時間 (totalMinutes)</th>
-                        <th>過去最高待ち時間 (maxTeams)</th>
+                        <th>履歴表示</th>
+                        <th>合計稼働時間</th>
+                        <th>過去最高待ち時間</th>
                     </tr>
                 </thead>
                 <tbody id="log-table-body">
@@ -314,7 +314,7 @@
             const dataList = await response.json(); 
 
             if (!dataList || dataList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="status-message">スプレッドシートにデータがまだ登録されていません。</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="status-message">データがまだ登録されていません。</td></tr>`;
                 resetUI();
                 return;
             }
