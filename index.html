@@ -1004,7 +1004,7 @@
             isDanger = true;
         } else if (actionType === 'close-admin') {
             title = "本部の完全終了";
-            message = "本当に本部システムをクローズしますか？現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
+            message = "本当に本部システムをクローズしますか。<br>現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
             confirmText = "本部をクローズする";
             isDanger = true;
         }
@@ -1179,11 +1179,11 @@
         if (role === 'admin') {
             const btn = document.getElementById('btn-admin-start');
             if (btn && btn.classList.contains('disabled-admin')) {
-                openCustomAlert("サーバー保護制限", "パブリックサーバー保護のため、現在この端末で作成できる本部数の上限（3部屋）に達しています。既存の本部タブを閉じて枠が空くまでお待ちください。");
+                openCustomAlert("サーバー保護制限", "現在、この端末で作成できる本部数の上限に達しています。既存の本部タブを閉じてからお試しください。");
                 return;
             }
             if (getActiveAdminCount() >= 3) {
-                openCustomAlert("サーバー保護制限", "パブリックサーバー保護のため、現在この端末で作成できる本部数の上限（3部屋）に達しています。既存の本部タブを閉じて枠が空くまでお待ちください。");
+                openCustomAlert("サーバー保護制限", "現在、この端末で作成できる本部数の上限に達しています。既存の本部タブを閉じてからお試しください。");
                 return;
             }
             registerActiveAdmin();
