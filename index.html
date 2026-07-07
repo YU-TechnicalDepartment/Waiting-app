@@ -1558,6 +1558,9 @@
     function triggerSecurityAlert() {
         const overlay = document.getElementById('custom-dialog-overlay');
         const box = document.getElementById('custom-dialog-box');
+
+        // 🛠️ 【追加】もし画面の準備ができる前に呼び出されたら、エラーを出さずに無視する
+        if (!overlay || !box) return;
         
         // ダイアログ層がすでにアクティブかつ警告中なら多重表示しない
         if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
