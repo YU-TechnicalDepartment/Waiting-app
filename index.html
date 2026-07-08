@@ -6,6 +6,7 @@
     <title>リアルタイム待ち時間管理システム</title>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root {
             --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
@@ -526,6 +527,14 @@
             line-height: 1.5;
             word-break: break-all;
         }
+
+        /* 2. Turnstile用のセンタリング用CSS */
+        .turnstile-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            min-height: 65px;
+        }
     </style>
 </head>
 <body>
@@ -536,7 +545,7 @@
         <h1>リアルタイム待ち時間管理</h1>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
-        <div class="select-panel" onclick="selectRole('admin')">
+        <div class="select-panel" onclick="openTurnstileDialog('admin')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
             </div>
@@ -546,7 +555,7 @@
             </div>
         </div>
 
-        <div class="select-panel" onclick="selectRole('client')">
+        <div class="select-panel" onclick="openTurnstileDialog('client')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" fill="currentColor"/></svg>
             </div>
@@ -799,24 +808,22 @@
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
+    // 4. Turnstile用の変数設定
+    let turnstileWidgetId = null;
+    let selectedPendingRole = null;
+
     // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
-            masterRole = 'client';
-            navigate('screen-client-setup');
-            const idInput = document.getElementById('input-peer-id');
-            if (idInput) {
-                idInput.value = joinId;
-                setTimeout(() => {
-                    const pinInput = document.getElementById('input-pin');
-                    if (pinInput) pinInput.focus();
-                }, 400);
-            }
+            // URL経由の場合も、直接接続設定画面を開くのではなく、認証を挟む
+            selectedPendingRole = 'client';
+            openTurnstileDialog('client', joinId);
+        } else {
+            // 🛡️ セキュリティ：起動時に開発者ツール防御システムを始動
+            startSecurityMonitor();
         }
-        // 🛡️ セキュリティ：起動時に開発者ツール防御システムを始動
-        startSecurityMonitor();
     });
 
     // 誤操作による離脱・リロードの防止プロテクター
@@ -1031,6 +1038,11 @@
     }
 
     function closeCustomDialog() {
+        // Turnstileダイアログが閉じられる場合、ウィジェットの実体を明示的に削除して重複を防ぐ
+        if (turnstileWidgetId !== null) {
+            try { turnstile.remove(turnstileWidgetId); } catch(e){}
+            turnstileWidgetId = null;
+        }
         document.getElementById('custom-dialog-overlay').classList.remove('active');
     }
 
@@ -1083,19 +1095,81 @@
 
     setInterval(cleanExpiredAdmins, 10000);
 
-    function selectRole(role) {
-        if (role === 'admin') {
-            if (getActiveAdminCount() >= 3) {
-                openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+    // 5. Cloudflare Turnstile 認証用モーダル生成ロジック
+    function openTurnstileDialog(role, autoJoinId = null) {
+        selectedPendingRole = role;
+        
+        // 事前バリデーション（管理画面の多重起動チェック）
+        if (role === 'admin' && getActiveAdminCount() >= 3) {
+            openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+            return;
+        }
+
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">セキュリティ確認</div>
+            <div class="dialog-message">システム保護のため、以下のチェックを完了してください。</div>
+            <div class="turnstile-container">
+                <div id="cf-turnstile-element"></div>
+            </div>
+            <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+
+        // Turnstileのレンダリング開始
+        setTimeout(() => {
+            if (!window.turnstile) {
+                box.innerHTML += `<p style="color:var(--accent-red); font-size:0.8rem; margin-top:10px;">Turnstileスクリプトの読み込みに失敗しました。再読み込みしてください。</p>`;
                 return;
             }
+            
+            turnstileWidgetId = turnstile.render('#cf-turnstile-element', {
+                sitekey: 'YOUR_TURNSTILE_SITE_KEY', // 👈 ご自身のCloudflareサイトキーに変更
+                theme: 'light',
+                callback: function(token) {
+                    // 認証成功時、少しディレイを挟んでダイアログを閉じ、本来の処理へ移行
+                    setTimeout(() => {
+                        closeCustomDialog();
+                        executeRoleTransition(role, autoJoinId);
+                    }, 500);
+                },
+                'error-callback': function() {
+                    openCustomAlert("認証エラー", "セキュリティチェック中にエラーが発生しました。時間を置いて再度お試しください。");
+                }
+            });
+        }, 100);
+    }
+
+    // 6. 認証通過後のロール決定・画面遷移トリガー
+    function executeRoleTransition(role, autoJoinId = null) {
+        if (role === 'admin') {
             registerActiveAdmin();
             masterRole = 'admin';
             initAdminPeer();
         } else {
             masterRole = 'client';
             navigate('screen-client-setup');
+            
+            // QRコードなどの自動ID埋め込みがある場合
+            if (autoJoinId) {
+                const idInput = document.getElementById('input-peer-id');
+                if (idInput) {
+                    idInput.value = autoJoinId;
+                    setTimeout(() => {
+                        const pinInput = document.getElementById('input-pin');
+                        if (pinInput) pinInput.focus();
+                    }, 400);
+                }
+            } else {
+                // 通常起動時はセキュリティ防御モニターを始動
+                startSecurityMonitor();
+            }
         }
+    }
+
+    // 元々のselectRoleは、Turnstile経由にするため不要になりましたが互換性のために中身を移譲
+    function selectRole(role) {
+        openTurnstileDialog(role);
     }
 
     // 1. 本部ホスト起動
