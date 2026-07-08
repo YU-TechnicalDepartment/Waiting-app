@@ -526,17 +526,6 @@
             line-height: 1.5;
             word-break: break-all;
         }
-        /* サーバー保護制限用の無効化スタイル */
-        .select-panel.disabled-admin {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: var(--border-soft) !important;
-            box-shadow: none !important;
-        }
-        .select-panel.disabled-admin:hover {
-            border-color: var(--border-soft) !important;
-            box-shadow: none !important;
-        }
     </style>
 </head>
 <body>
@@ -547,7 +536,7 @@
         <h1>リアルタイム待ち時間管理</h1>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
-        <div class="select-panel" id="btn-admin-start" onclick="selectRole('admin')">
+        <div class="select-panel" onclick="selectRole('admin')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
             </div>
@@ -569,8 +558,7 @@
 
         <div class="policy-agreement-box">
             上記のボタンを押して本システムを開始することで、<br>
-            <a href="terms.html" target="_blank">利用規約</a> および <a href="privacy.html" target="_blank">プライバシーポリシー</a> に同意したものとみなされます。<br>
-            また、 <a href="analytics.html" target="_blank">統計情報</a> もご確認ください。
+            <a href="terms.html" target="_blank">利用規約</a> および <a href="privacy.html" target="_blank">プライバシーポリシー</a> に同意したものとみなされます。
         </div>
     </div>
 
@@ -798,40 +786,6 @@
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
-    // 📈 統計情報収集用の変数と関数
-    let statsStartTime = null;
-    let statsMaxMinutes = 0;
-    let isStatsSent = false;
-    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyxuIiYTkhpfTeCbYuIaT5ad_hl4KQs6ytywkHLHnDRxSadA9dN7wvJSoDN_y_mvnoP/exec";
-
-    // 📈 統計データを確実に送信し、完了を待つ関数
-    async function sendStatisticsToGAS() {
-        if (!statsStartTime || !currentAdminId || isStatsSent) return;
-        isStatsSent = true;
-
-        const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
-        const reportData = {
-            roomId: currentAdminId,
-            totalMinutes: durationMinutes,
-            maxTeams: statsMaxMinutes
-        };
-
-        console.log("GASへ統計データを送信中...", reportData);
-
-        try {
-            // fetchの完了を待つことで、非同期処理が途中で切断されるのを防ぎます
-            await fetch(GAS_WEBAPP_URL, {
-                method: 'POST',
-                body: JSON.stringify(reportData),
-                headers: { 'Content-Type': 'application/json' },
-                mode: 'no-cors' // クロスドメイン制限によるエラー中断を防止
-            });
-            console.log("統計データの送信処理が完了しました。");
-        } catch (err) {
-            console.error("統計データの送信に失敗しました:", err);
-        }
-    }
-
     let state = {
         teams: 0,
         pace: 5,
@@ -846,24 +800,7 @@
     let currentTargetPeerId = null;
 
     // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
-    // 🛡️ サーバー保護のための本部同時起動数リアルタイム監視
-    function updateAdminStartButtonState() {
-        const btn = document.getElementById('btn-admin-start');
-        if (!btn) return;
-        
-        const currentCount = getActiveAdminCount();
-        if (currentCount >= 3) {
-            btn.classList.add('disabled-admin');
-        } else {
-            btn.classList.remove('disabled-admin');
-        }
-    }
-
     window.addEventListener('DOMContentLoaded', () => {
-        // 定期的に本部数をチェックして、上限を下回ったら自動的に作れるようにする
-        updateAdminStartButtonState();
-        setInterval(updateAdminStartButtonState, 2000);
-
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
@@ -882,22 +819,10 @@
         startSecurityMonitor();
     });
 
-    // 誤操作による離脱・リロードの防止プロテクター（マージ・整理済み）
+    // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
-            if (masterRole === 'admin' && statsStartTime && !isStatsSent) {
-                isStatsSent = true;
-                // タブ閉じやリロード時は待機できないため、プレーンテキスト形式のBlobで即時送信
-                const durationMinutes = Math.max(1, Math.round((Date.now() - statsStartTime) / 1000 / 60));
-                const reportData = JSON.stringify({
-                    roomId: currentAdminId,
-                    totalMinutes: durationMinutes,
-                    maxTeams: statsMaxMinutes
-                });
-                const blob = new Blob([reportData], { type: 'text/plain' });
-                navigator.sendBeacon(GAS_WEBAPP_URL, blob);
-            }
-            releaseWakeLock(); 
+            releaseWakeLock(); // スリープ防止を安全に解除
             unregisterActiveAdmin();
             e.preventDefault();
             e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
@@ -1005,7 +930,7 @@
             isDanger = true;
         } else if (actionType === 'close-admin') {
             title = "本部の完全終了";
-            message = "本当に本部システムをクローズしますか。<br>現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
+            message = "本当に本部システムをクローズしますか？現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
             confirmText = "本部をクローズする";
             isDanger = true;
         }
@@ -1022,25 +947,8 @@
     }
 
     function handleCustomConfirmResult(isYes) {
-        if (!isYes) {
-            closeCustomDialog();
-            return;
-        }
-
-        if (currentDialogContext === 'close-admin') {
-            // ボタンを無効化して多重クリックを完全に防御
-            const dialogBox = document.getElementById('custom-dialog-box');
-            const buttons = dialogBox.querySelectorAll('button');
-            buttons.forEach(btn => btn.disabled = true);
-            const primaryBtn = dialogBox.querySelector('button:not(.secondary)');
-            if (primaryBtn) primaryBtn.innerText = "終了処理中...";
-            
-            // クローズ処理を実効（非同期完了後に中段でダイアログが閉じられます）
-            executeCloseAdminMaster();
-            return;
-        }
-
         closeCustomDialog();
+        if (!isYes) return;
 
         if (currentDialogContext === 'reload') {
             releaseWakeLock();
@@ -1135,7 +1043,6 @@
         releaseWakeLock();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
-        closeCustomDialog();
         location.reload();
     }
 
@@ -1178,13 +1085,8 @@
 
     function selectRole(role) {
         if (role === 'admin') {
-            const btn = document.getElementById('btn-admin-start');
-            if (btn && btn.classList.contains('disabled-admin')) {
-                openCustomAlert("サーバー保護制限", "現在、この端末で作成できる本部数の上限に達しています。既存の本部タブを閉じてからお試しください。");
-                return;
-            }
             if (getActiveAdminCount() >= 3) {
-                openCustomAlert("サーバー保護制限", "現在、この端末で作成できる本部数の上限に達しています。既存の本部タブを閉じてからお試しください。");
+                openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
                 return;
             }
             registerActiveAdmin();
@@ -1201,10 +1103,6 @@
         navigate('screen-admin');
         currentAdminId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
         correctPin = String(Math.floor(1000 + Math.random() * 9000));
-        
-        // 📈 統計用：本部が立ち上がった時間を記録
-        statsStartTime = Date.now();
-        statsMaxTeams = 0;
 
         document.getElementById('admin-info').innerHTML = 
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
@@ -1275,12 +1173,7 @@
         }
     }
 
-    // 修正：asyncを付与して、GASへの送信完了(await)を待ってから画面をリロードするように変更
-    async function executeCloseAdminMaster() {
-        if (masterRole === 'admin') {
-            await sendStatisticsToGAS(); 
-        }
-        
+    function executeCloseAdminMaster() {
         connectedClients.forEach(conn => {
             if (conn.open) {
                 conn.send({ type: 'ADMIN_CLOSED_FORCED' });
@@ -1291,7 +1184,6 @@
         unregisterActiveAdmin();
         if(peer) peer.destroy();
         window.history.replaceState({}, document.title, window.location.pathname);
-        closeCustomDialog();
         location.reload();
     }
 
@@ -1333,14 +1225,6 @@
                     state = data.state;
                     applyStateToUI();
                     navigate('screen-client-choices');
-                    
-                    // 🔌【パブリックサーバーからの即時切断】
-                    // 本部と直接のP2P接続（DataConnection）が確立されたため、
-                    // 支端末側のPeerJSをシグナリングサーバーから切断して負荷をゼロにします。
-                    if (peer && typeof peer.disconnect === 'function') {
-                        console.log("支端末：P2P確立成功。パブリックサーバーから切断しました。");
-                        peer.disconnect();
-                    }
                 }
                 if (data.type === 'AUTH_NG') {
                     setConnectionLoadingState(false);
@@ -1417,20 +1301,21 @@
     }
 
     function goClientMode(mode) {
-        // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
-        releaseWakeLock().then(() => {
-            const wlViewOn = document.getElementById('wakelock-view-on');
-            const wlViewOff = document.getElementById('wakelock-view-off');
-            const wlStaffOn = document.getElementById('wakelock-staff-on');
-            const wlStaffOff = document.getElementById('wakelock-staff-off');
+    // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
+    releaseWakeLock().then(() => {
+        // 要素が存在する場合のみクラスを操作するように安全対策を追加
+        const wlViewOn = document.getElementById('wakelock-view-on');
+        const wlViewOff = document.getElementById('wakelock-view-off');
+        const wlStaffOn = document.getElementById('wakelock-staff-on');
+        const wlStaffOff = document.getElementById('wakelock-staff-off');
 
-            if (wlViewOn) wlViewOn.classList.remove('active');
-            if (wlViewOff) wlViewOff.classList.add('active');
-            if (wlStaffOn) wlStaffOn.classList.remove('active');
-            if (wlStaffOff) wlStaffOff.classList.add('active');
+        if (wlViewOn) wlViewOn.classList.remove('active');
+        if (wlViewOff) wlViewOff.classList.add('active');
+        if (wlStaffOn) wlStaffOn.classList.remove('active');
+        if (wlStaffOff) wlStaffOff.classList.add('active');
 
-            if (mode === 'display') navigate('screen-display');
-            else navigate('screen-staff');
+        if (mode === 'display') navigate('screen-display');
+        else navigate('screen-staff');
         });
     }
 
@@ -1469,33 +1354,12 @@
     function adjustMasterTeams(amount) {
         state.teams += amount;
         if (state.teams < 0) state.teams = 0;
-        
-
-        
         recalculateTotal();
     }
 
     function adjustDirectMinutes(amount) {
         state.totalTime += amount;
         if (state.totalTime < 0) state.totalTime = 0;
-        
-        // 🛠️ 分単位直接操作時も、設定されたペースから「組数」を逆算して連動させます
-        if (state.pace > 0) {
-            state.teams = Math.ceil(state.totalTime / state.pace);
-        } else {
-            state.teams = 0;
-        }
-        
-        // 📈 統計用：最大待ち組数の更新チェック
-        if (state.teams > statsMaxTeams) {
-            statsMaxTeams = state.teams;
-        }
-        
-        // 📈 統計用：分単位直接操作時も、過去最高の待ち時間（分）を更新したら記録
-        if (state.totalTime > statsMaxMinutes) {
-            statsMaxMinutes = state.totalTime;
-        }
-
         applyStateToUI();
         broadcastToAll();
     }
@@ -1515,12 +1379,6 @@
         if (state.controlMode === 'pace') {
             state.totalTime = state.teams * state.pace;
         }
-        
-        // 📈 統計用：過去最高の待ち時間（分）を更新したら記録
-        if (state.totalTime > statsMaxMinutes) {
-            statsMaxMinutes = state.totalTime;
-        }
-
         applyStateToUI();
         broadcastToAll();
     }
@@ -1652,10 +1510,10 @@
             }
         }, 1500);
 
-        // D. 最強の深層防衛：debugger割り込み時間計測
+        // D. 最強の深層防衛：debugger割り込み時間計測（開発者ツールが開いていると処理が一瞬停止する性質を利用）
         setInterval(() => {
             let start = performance.now();
-            debugger; 
+            debugger; // 開発者ツールが閉じている時は一瞬でスルーされます
             let end = performance.now();
             if (end - start > 100) {
                 triggerSecurityAlert();
@@ -1666,9 +1524,6 @@
     function triggerSecurityAlert() {
         const overlay = document.getElementById('custom-dialog-overlay');
         const box = document.getElementById('custom-dialog-box');
-
-        // 🛠️ 【追加】もし画面の準備ができる前に呼び出されたら、エラーを出さずに無視する
-        if (!overlay || !box) return;
         
         // ダイアログ層がすでにアクティブかつ警告中なら多重表示しない
         if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
