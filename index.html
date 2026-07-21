@@ -98,6 +98,65 @@
             line-height: 1.6;
         }
 
+        /* 📢 運営からのお知らせ用スタイル */
+        .news-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .news-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .news-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .news-item {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border-bottom: 1px dashed var(--border-soft);
+            padding-bottom: 8px;
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .news-meta {
+            display: inline-flex;
+            gap: 8px;
+            margin-right: 8px;
+        }
+
+        .news-date {
+            color: var(--text-sub);
+            font-size: 0.78rem;
+        }
+
+        .news-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
         /* 共通ボタン */
         .btn {
             width: 100%;
@@ -555,6 +614,13 @@
         <h1>リアルタイム待ち時間管理</h1>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
+        <div id="news-container" class="news-box" style="display: none;">
+            <div class="news-header">
+                運営からのお知らせ
+            </div>
+            <ul id="news-list" class="news-list"></ul>
+        </div>
+
         <div class="select-panel" onclick="openTurnstileDialog('admin')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
@@ -824,6 +890,9 @@
 
     // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
     window.addEventListener('DOMContentLoaded', () => {
+        // 📢 お知らせデータの読み込みを起動
+        loadNews();
+
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
@@ -835,6 +904,34 @@
             startSecurityMonitor();
         }
     });
+
+    // 📢 news.json を非同期取得してHTMLに反映する関数
+    async function loadNews() {
+        try {
+            const response = await fetch(`news.json?t=${Date.now()}`);
+            if (!response.ok) return;
+
+            const newsData = await response.json();
+            if (!Array.isArray(newsData) || newsData.length === 0) return;
+
+            const newsListEl = document.getElementById('news-list');
+            const newsContainer = document.getElementById('news-container');
+
+            newsListEl.innerHTML = newsData.map(item => `
+                <li class="news-item">
+                    <span class="news-meta">
+                        <span class="news-date">${item.date || ''}</span>
+                        ${item.category ? `<span class="news-badge">${item.category}</span>` : ''}
+                    </span>
+                    <span class="news-text">${item.message || ''}</span>
+                </li>
+            `).join('');
+
+            newsContainer.style.display = 'block';
+        } catch (e) {
+            console.log('お知らせデータの読み込みをスキップしました。');
+        }
+    }
 
     // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
@@ -1177,7 +1274,6 @@
         }
     }
 
-    // 元々のselectRoleは、Turnstile経由にするため不要になりましたが互換性のために中身を移譲
     function selectRole(role) {
         openTurnstileDialog(role);
     }
@@ -1385,21 +1481,19 @@
     }
 
     function goClientMode(mode) {
-    // モード移行時は一旦スリープ防止をオフにリセット（誤作動防止）
-    releaseWakeLock().then(() => {
-        // 要素が存在する場合のみクラスを操作するように安全対策を追加
-        const wlViewOn = document.getElementById('wakelock-view-on');
-        const wlViewOff = document.getElementById('wakelock-view-off');
-        const wlStaffOn = document.getElementById('wakelock-staff-on');
-        const wlStaffOff = document.getElementById('wakelock-staff-off');
+        releaseWakeLock().then(() => {
+            const wlViewOn = document.getElementById('wakelock-view-on');
+            const wlViewOff = document.getElementById('wakelock-view-off');
+            const wlStaffOn = document.getElementById('wakelock-staff-on');
+            const wlStaffOff = document.getElementById('wakelock-staff-off');
 
-        if (wlViewOn) wlViewOn.classList.remove('active');
-        if (wlViewOff) wlViewOff.classList.add('active');
-        if (wlStaffOn) wlStaffOn.classList.remove('active');
-        if (wlStaffOff) wlStaffOff.classList.add('active');
+            if (wlViewOn) wlViewOn.classList.remove('active');
+            if (wlViewOff) wlViewOff.classList.add('active');
+            if (wlStaffOn) wlStaffOn.classList.remove('active');
+            if (wlStaffOff) wlStaffOff.classList.add('active');
 
-        if (mode === 'display') navigate('screen-display');
-        else navigate('screen-staff');
+            if (mode === 'display') navigate('screen-display');
+            else navigate('screen-staff');
         });
     }
 
@@ -1570,7 +1664,6 @@
 
     // 🛡️ 5. セキュリティ：開発者ツール検知・防御・ロックシステム
     function startSecurityMonitor() {
-        // A. キーボードショートカットのブロック (F12, Ctrl+Shift+I, J, C)
         window.addEventListener('keydown', (e) => {
             if (e.key === 'F12' || 
                 (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
@@ -1580,12 +1673,10 @@
             }
         });
 
-        // B. 右クリックメニュー（検証を開く動線）の完全封印
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
 
-        // C. ウィンドウのリサイズ幅監視（横や下からツールがニョキッと出てきた時の検知）
         let threshold = 160;
         setInterval(() => {
             if (window.outerWidth - window.innerWidth > threshold || 
@@ -1594,10 +1685,9 @@
             }
         }, 1500);
 
-        // D. 最強の深層防衛：debugger割り込み時間計測（開発者ツールが開いていると処理が一瞬停止する性質を利用）
         setInterval(() => {
             let start = performance.now();
-            debugger; // 開発者ツールが閉じている時は一瞬でスルーされます
+            debugger;
             let end = performance.now();
             if (end - start > 100) {
                 triggerSecurityAlert();
@@ -1609,7 +1699,6 @@
         const overlay = document.getElementById('custom-dialog-overlay');
         const box = document.getElementById('custom-dialog-box');
         
-        // ダイアログ層がすでにアクティブかつ警告中なら多重表示しない
         if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
 
         box.innerHTML = `
