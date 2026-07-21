@@ -104,6 +104,7 @@
             border: 1px solid var(--border-soft);
             border-radius: 14px;
             padding: 18px 20px;
+            margin-top: 24px;
             margin-bottom: 24px;
             text-align: left;
         }
@@ -507,7 +508,7 @@
 
         /* 📋 規約＆プライバシーポリシー同意エリア用スタイル */
         .policy-agreement-box {
-            margin-top: 32px;
+            margin-top: 16px;
             text-align: center;
             font-size: 0.75rem;
             color: var(--text-sub);
@@ -597,7 +598,7 @@
             word-break: break-all;
         }
 
-        /* 2. Turnstile用のセンタリング用CSS */
+        /* Turnstile用のセンタリング用CSS */
         .turnstile-container {
             display: flex;
             justify-content: center;
@@ -614,13 +615,6 @@
         <h1>リアルタイム待ち時間管理</h1>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
-        <div id="news-container" class="news-box" style="display: none;">
-            <div class="news-header">
-                運営からのお知らせ
-            </div>
-            <ul id="news-list" class="news-list"></ul>
-        </div>
-
         <div class="select-panel" onclick="openTurnstileDialog('admin')">
             <div class="panel-icon">
                 <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
@@ -639,6 +633,13 @@
                 <div class="panel-title">支端末として接続</div>
                 <div class="panel-desc">本部に接続し、ディスプレイや現場操作リモコンとして連動します。</div>
             </div>
+        </div>
+
+        <div id="news-container" class="news-box" style="display: none;">
+            <div class="news-header">
+                運営からのお知らせ
+            </div>
+            <ul id="news-list" class="news-list"></ul>
         </div>
 
         <div class="policy-agreement-box">
@@ -884,7 +885,7 @@
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
-    // 4. Turnstile用の変数設定
+    // Turnstile用の変数設定
     let turnstileWidgetId = null;
     let selectedPendingRole = null;
 
@@ -896,7 +897,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
-            // URL経由の場合も、直接接続設定画面を開くのではなく、認証を挟む
             selectedPendingRole = 'client';
             openTurnstileDialog('client', joinId);
         } else {
@@ -905,10 +905,18 @@
         }
     });
 
-    // 📢 news.json を非同期取得してHTMLに反映する関数
+    // 📢 news.json を非同期取得してHTMLに反映する関数（強固なキャッシュ無効化）
     async function loadNews() {
         try {
-            const response = await fetch(`news.json?t=${Date.now()}`);
+            // キャッシュ防止ヘッダーとタイムスタンプの両方で確実に最新を取得
+            const response = await fetch(`news.json?_t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
+
             if (!response.ok) return;
 
             const newsData = await response.json();
@@ -945,19 +953,14 @@
 
     // ⚡ スリープ防止（Wake Lock）の制御関数
     async function toggleWakeLock(shouldLock, viewPrefix) {
-        // UIのアクティブボタン表示変更
         document.getElementById(`wakelock-${viewPrefix}-on`).classList.toggle('active', shouldLock);
         document.getElementById(`wakelock-${viewPrefix}-off`).classList.toggle('active', !shouldLock);
 
         if (shouldLock) {
             if ('wakeLock' in navigator) {
                 try {
-                    // 以前のロックがあれば一端解除
                     if (wakeLockObj) await wakeLockObj.release();
-                    
                     wakeLockObj = await navigator.wakeLock.request('screen');
-                    
-                    // タブの切り替えなどでロックが外れた場合の自動再取得設定
                     wakeLockObj.addEventListener('release', () => {
                         console.log('Wake Lock was released');
                     });
@@ -994,7 +997,6 @@
         document.getElementById('custom-dialog-overlay').classList.add('active');
     }
 
-    // 本部の接続用QRコードダイアログを表示
     function openQrDialog() {
         if (!currentAdminId) return;
         
@@ -1145,7 +1147,6 @@
     }
 
     function closeCustomDialog() {
-        // Turnstileダイアログが閉じられる場合、ウィジェットの実体を明示的に削除して重複を防ぐ
         if (turnstileWidgetId !== null) {
             try { turnstile.remove(turnstileWidgetId); } catch(e){}
             turnstileWidgetId = null;
@@ -1202,11 +1203,9 @@
 
     setInterval(cleanExpiredAdmins, 10000);
 
-    // 5. Cloudflare Turnstile 認証用モーダル生成ロジック
     function openTurnstileDialog(role, autoJoinId = null) {
         selectedPendingRole = role;
         
-        // 事前バリデーション（管理画面の多重起動チェック）
         if (role === 'admin' && getActiveAdminCount() >= 3) {
             openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
             return;
@@ -1223,7 +1222,6 @@
         `;
         document.getElementById('custom-dialog-overlay').classList.add('active');
 
-        // Turnstileのレンダリング開始
         setTimeout(() => {
             if (!window.turnstile) {
                 box.innerHTML += `<p style="color:var(--accent-red); font-size:0.8rem; margin-top:10px;">Turnstileスクリプトの読み込みに失敗しました。再読み込みしてください。</p>`;
@@ -1231,10 +1229,9 @@
             }
             
             turnstileWidgetId = turnstile.render('#cf-turnstile-element', {
-                sitekey: '0x4AAAAAADx7joy7nbPtTI0d', // 👈 ご自身のCloudflareサイトキーに変更
+                sitekey: '0x4AAAAAADx7joy7nbPtTI0d',
                 theme: 'light',
                 callback: function(token) {
-                    // 認証成功時、少しディレイを挟んでダイアログを閉じ、本来の処理へ移行
                     setTimeout(() => {
                         closeCustomDialog();
                         executeRoleTransition(role, autoJoinId);
@@ -1247,7 +1244,6 @@
         }, 100);
     }
 
-    // 6. 認証通過後のロール決定・画面遷移トリガー
     function executeRoleTransition(role, autoJoinId = null) {
         if (role === 'admin') {
             registerActiveAdmin();
@@ -1257,7 +1253,6 @@
             masterRole = 'client';
             navigate('screen-client-setup');
             
-            // QRコードなどの自動ID埋め込みがある場合
             if (autoJoinId) {
                 const idInput = document.getElementById('input-peer-id');
                 if (idInput) {
@@ -1268,7 +1263,6 @@
                     }, 400);
                 }
             } else {
-                // 通常起動時はセキュリティ防御モニターを始動
                 startSecurityMonitor();
             }
         }
