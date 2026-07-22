@@ -7,10 +7,12 @@
     <meta property="og:description" content="P2P通信を利用して、本部と複数の支端末の待ち時間をリアルタイムに同期・管理します。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://wait.3y.f5.si/"> 
-    <meta property="og:image" content="https://wait.3y.f5.si/ogp-image.png"> <meta property="og:site_name" content="リアルタイム待ち時間管理システム">
+    <meta property="og:image" content="https://wait.3y.f5.si/ogp-image.png"> 
+    <meta property="og:site_name" content="リアルタイム待ち時間管理システム">
     <meta property="og:locale" content="ja_JP">
     
-    <meta name="twitter:card" content="summary_large_image"> <meta name="twitter:title" content="リアルタイム待ち時間管理システム">
+    <meta name="twitter:card" content="summary_large_image"> 
+    <meta name="twitter:title" content="リアルタイム待ち時間管理システム">
     <meta name="twitter:description" content="P2P通信を利用して、本部と複数の支端末の待ち時間をリアルタイムに同期・管理します。">
     <meta name="twitter:image" content="https://wait.3y.f5.si/ogp-image.png">
     <title>リアルタイム待ち時間管理システム</title>
@@ -98,25 +100,85 @@
             line-height: 1.6;
         }
 
-        /* 📢 運営からのお知らせ用スタイル */
+        /* 📢 運営からのお知らせ用スタイル（アコーディオン対応） */
         .news-box {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 14px;
-            padding: 18px 20px;
+            padding: 16px 20px;
             margin-top: 24px;
             margin-bottom: 24px;
             text-align: left;
+            user-select: none;
         }
 
         .news-header {
             font-size: 0.85rem;
             font-weight: 700;
             color: var(--text-sub);
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .news-header:hover {
+            color: var(--text-main);
+        }
+
+        .news-title-group {
             display: flex;
             align-items: center;
             gap: 6px;
+        }
+
+        .news-chevron {
+            transition: transform 0.3s ease;
+            color: var(--text-sub);
+        }
+
+        .news-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .news-body {
+            display: none;
+            margin-top: 14px;
+            border-top: 1px dashed var(--border-soft);
+            padding-top: 12px;
+        }
+
+        .news-body.open {
+            display: block;
+        }
+
+        /* お知らせ読み込み中スピナー */
+        .news-loading-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 0;
+            color: var(--text-sub);
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .news-spinner-icon {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--toggle-bg);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        .news-empty-msg {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            text-align: center;
+            padding: 10px 0;
         }
 
         .news-list {
@@ -635,11 +697,27 @@
             </div>
         </div>
 
-        <div id="news-container" class="news-box" style="display: none;">
-            <div class="news-header">
-                運営からのお知らせ
+        <div id="news-container" class="news-box">
+            <div class="news-header" onclick="toggleNewsAccordion()">
+                <div class="news-title-group">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>
+                    <span>運営からのお知らせ</span>
+                </div>
+                <svg id="news-chevron" class="news-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
             </div>
-            <ul id="news-list" class="news-list"></ul>
+
+            <div id="news-body" class="news-body">
+                <div id="news-loading" class="news-loading-wrapper" style="display: none;">
+                    <span class="news-spinner-icon"></span>
+                    <span>読み込み中...</span>
+                </div>
+
+                <div id="news-empty-msg" class="news-empty-msg" style="display: none;">お知らせはありません。</div>
+
+                <ul id="news-list" class="news-list" style="display: none;"></ul>
+            </div>
         </div>
 
         <div class="policy-agreement-box">
@@ -865,6 +943,11 @@
     let isAdminFullscreen = false;
     let clientNameCounter = 0; 
     
+    // 📢 お知らせアコーディオン管理用のフラグとデータ保持
+    let isNewsAccordionOpen = false;
+    let isNewsFetched = false;
+    let cachedNewsData = null;
+
     // ⚡ 自動スリープ防止（Wake Lock オブジェクト）保持用
     let wakeLockObj = null;
 
@@ -891,9 +974,6 @@
 
     // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
     window.addEventListener('DOMContentLoaded', () => {
-        // 📢 お知らせデータの読み込みを起動
-        loadNews();
-
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
         if (joinId) {
@@ -905,10 +985,42 @@
         }
     });
 
-    // 📢 news.json を非同期取得してHTMLに反映する関数（強固なキャッシュ無効化）
-    async function loadNews() {
+    // 📢 運営からのお知らせ アコーディオン開閉制御
+    async function toggleNewsAccordion() {
+        const chevron = document.getElementById('news-chevron');
+        const newsBody = document.getElementById('news-body');
+
+        isNewsAccordionOpen = !isNewsAccordionOpen;
+
+        if (isNewsAccordionOpen) {
+            chevron.classList.add('open');
+            newsBody.classList.add('open');
+
+            // まだデータを取得していない場合は取得＆スピナー表示を実行
+            if (!isNewsFetched) {
+                await fetchAndRenderNews();
+            }
+        } else {
+            chevron.classList.remove('open');
+            newsBody.classList.remove('open');
+        }
+    }
+
+    // 📢 news.json を非同期取得してスピナー演出（約0.75秒）付きで表示する関数
+    async function fetchAndRenderNews() {
+        const loadingEl = document.getElementById('news-loading');
+        const emptyMsgEl = document.getElementById('news-empty-msg');
+        const newsListEl = document.getElementById('news-list');
+
+        // UIをローディング状態に初期化
+        loadingEl.style.display = 'flex';
+        emptyMsgEl.style.display = 'none';
+        newsListEl.style.display = 'none';
+
+        // フェッチ開始時刻を記録（スピナーを0.6~0.9秒見せるための最小時間保持）
+        const startTime = Date.now();
+
         try {
-            // キャッシュ防止ヘッダーとタイムスタンプの両方で確実に最新を取得
             const response = await fetch(`news.json?_t=${Date.now()}`, {
                 cache: 'no-store',
                 headers: {
@@ -917,15 +1029,28 @@
                 }
             });
 
-            if (!response.ok) return;
+            if (response.ok) {
+                cachedNewsData = await response.json();
+            } else {
+                cachedNewsData = [];
+            }
+        } catch (e) {
+            cachedNewsData = [];
+        }
 
-            const newsData = await response.json();
-            if (!Array.isArray(newsData) || newsData.length === 0) return;
+        // 最低750ミリ秒（0.75秒）はスピナーを見せて自然な心地よい読み込み演出にする
+        const elapsedTime = Date.now() - startTime;
+        const targetDelay = 750; // 0.75秒
+        if (elapsedTime < targetDelay) {
+            await new Promise(resolve => setTimeout(resolve, targetDelay - elapsedTime));
+        }
 
-            const newsListEl = document.getElementById('news-list');
-            const newsContainer = document.getElementById('news-container');
+        // ローディング非表示
+        loadingEl.style.display = 'none';
+        isNewsFetched = true;
 
-            newsListEl.innerHTML = newsData.map(item => `
+        if (Array.isArray(cachedNewsData) && cachedNewsData.length > 0) {
+            newsListEl.innerHTML = cachedNewsData.map(item => `
                 <li class="news-item">
                     <span class="news-meta">
                         <span class="news-date">${item.date || ''}</span>
@@ -934,10 +1059,10 @@
                     <span class="news-text">${item.message || ''}</span>
                 </li>
             `).join('');
-
-            newsContainer.style.display = 'block';
-        } catch (e) {
-            console.log('お知らせデータの読み込みをスキップしました。');
+            newsListEl.style.display = 'flex';
+        } else {
+            // お知らせ件数が0または取得不可時
+            emptyMsgEl.style.display = 'block';
         }
     }
 
