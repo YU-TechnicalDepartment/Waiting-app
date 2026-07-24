@@ -943,12 +943,12 @@
     let isAdminFullscreen = false;
     let clientNameCounter = 0; 
     
-    // 📢 お知らせアコーディオン管理用のフラグとデータ保持
+    // お知らせアコーディオン管理用のフラグとデータ保持
     let isNewsAccordionOpen = false;
     let isNewsFetched = false;
     let cachedNewsData = null;
 
-    // ⚡ 自動スリープ防止（Wake Lock オブジェクト）保持用
+    // 自動スリープ防止（Wake Lock オブジェクト）保持用
     let wakeLockObj = null;
 
     // スパム・多重起動負荷対策システム
@@ -980,12 +980,12 @@
             selectedPendingRole = 'client';
             openTurnstileDialog('client', joinId);
         } else {
-            // 🛡️ セキュリティ：起動時に開発者ツール防御システムを始動
+            // セキュリティ：起動時に開発者ツール防御システムを始動
             startSecurityMonitor();
         }
     });
 
-    // 📢 運営からのお知らせ アコーディオン開閉制御
+    // 運営からのお知らせ アコーディオン開閉制御
     async function toggleNewsAccordion() {
         const chevron = document.getElementById('news-chevron');
         const newsBody = document.getElementById('news-body');
@@ -1006,7 +1006,7 @@
         }
     }
 
-    // 📢 news.json を非同期取得してスピナー演出（約0.75秒）付きで表示する関数
+    // news.json を非同期取得してスピナー演出付きで表示する関数
     async function fetchAndRenderNews() {
         const loadingEl = document.getElementById('news-loading');
         const emptyMsgEl = document.getElementById('news-empty-msg');
@@ -1076,7 +1076,7 @@
         }
     });
 
-    // ⚡ スリープ防止（Wake Lock）の制御関数
+    // スリープ防止（Wake Lock）の制御関数
     async function toggleWakeLock(shouldLock, viewPrefix) {
         document.getElementById(`wakelock-${viewPrefix}-on`).classList.toggle('active', shouldLock);
         document.getElementById(`wakelock-${viewPrefix}-off`).classList.toggle('active', !shouldLock);
@@ -1781,7 +1781,7 @@
         }
     }
 
-    // 🛡️ 5. セキュリティ：開発者ツール検知・防御・ロックシステム
+    // 5. セキュリティ：開発者ツール検知・防御・ロックシステム
     function startSecurityMonitor() {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'F12' || 
