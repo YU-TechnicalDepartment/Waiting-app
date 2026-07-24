@@ -1,8 +1,13 @@
 [
     {
-        "date": "2026-07-21",
-        "category": "アップデート",
-        "message": "OGP画像を変更しました。"
+        "date": "2030-07-24",
+        "category": "TEST",
+        "message": "<a href="https://scratch.mit.edu/users/YU1000/">TEST</a>"
+    },
+    {
+        "date": "2026-07-24",
+        "category": "お知らせ",
+        "message": "スマホ環境でも開発者ツールが検知されてしまうバグが発生しております。現在、原因究明を行っています。"
     },
     {
         "date": "2026-07-20",
