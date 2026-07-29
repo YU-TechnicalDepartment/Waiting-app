@@ -1406,14 +1406,8 @@
         document.getElementById('admin-info').innerHTML = 
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
 
-        peer = new Peer(currentAdminId, {
-            host: 'wait-peer-server.onrender.com',
-            port: 443,
-            path: '/myapp',
-            secure: true,
-            debug: 3
-        });
-        
+        peer = new Peer(currentAdminId);
+
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
@@ -1504,13 +1498,7 @@
 
         setConnectionLoadingState(true);
 
-        peer = new Peer({
-            host: 'wait-peer-server.onrender.com',
-            port: 443,
-            path: '/myapp',
-            secure: true,
-            debug: 3
-        });
+        peer = new Peer();
         
         let timeoutGuard = setTimeout(() => {
             if (masterRole === 'client' && document.getElementById('screen-client-setup').classList.contains('active')) {
@@ -1793,7 +1781,6 @@
         }
     }
 
-    /*
     // 5. セキュリティ：開発者ツール検知・防御・ロックシステム
     function startSecurityMonitor() {
         window.addEventListener('keydown', (e) => {
@@ -1844,7 +1831,6 @@
         `;
         overlay.classList.add('active');
     }
-    */
 </script>
 
 </body>
