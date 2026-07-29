@@ -1406,8 +1406,13 @@
         document.getElementById('admin-info').innerHTML = 
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
 
-        peer = new Peer(currentAdminId);
-
+        peer = new Peer(currentAdminId, {
+            host: 'p2p.yu1000-scratch.workers.dev',
+            port: 443,
+            path: '/',
+            secure: true
+        });
+        
         peer.on('connection', (conn) => {
             conn.on('data', (data) => {
                 if (data.type === 'REQ_AUTH') {
@@ -1498,7 +1503,12 @@
 
         setConnectionLoadingState(true);
 
-        peer = new Peer();
+        peer = new Peer({
+            host: 'p2p.yu1000-scratch.workers.dev',
+            port: 443,
+            path: '/',
+            secure: true
+        });
         
         let timeoutGuard = setTimeout(() => {
             if (masterRole === 'client' && document.getElementById('screen-client-setup').classList.contains('active')) {
