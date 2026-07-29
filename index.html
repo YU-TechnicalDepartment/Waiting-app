@@ -1410,7 +1410,8 @@
             host: 'wait-peer-server.onrender.com',
             port: 443,
             path: '/myapp',
-            secure: true
+            secure: true,
+            debug: 3
         });
         
         peer.on('connection', (conn) => {
@@ -1507,7 +1508,8 @@
             host: 'wait-peer-server.onrender.com',
             port: 443,
             path: '/myapp',
-            secure: true
+            secure: true,
+            debug: 3
         });
         
         let timeoutGuard = setTimeout(() => {
@@ -1791,6 +1793,7 @@
         }
     }
 
+    /*
     // 5. セキュリティ：開発者ツール検知・防御・ロックシステム
     function startSecurityMonitor() {
         window.addEventListener('keydown', (e) => {
@@ -1841,6 +1844,7 @@
         `;
         overlay.classList.add('active');
     }
+    */
 </script>
 
 </body>
