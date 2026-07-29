@@ -1407,7 +1407,7 @@
             `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
 
         peer = new Peer(currentAdminId, {
-            host: 'p2p.yu1000-scratch.workers.dev',
+            host: 'wait-peer-server.onrender.com',
             port: 443,
             path: '/',
             secure: true
@@ -1504,7 +1504,7 @@
         setConnectionLoadingState(true);
 
         peer = new Peer({
-            host: 'p2p.yu1000-scratch.workers.dev',
+            host: 'wait-peer-server.onrender.com',
             port: 443,
             path: '/',
             secure: true
