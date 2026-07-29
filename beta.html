@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="リアルタイム待ち時間管理システム">
+    <meta property="og:description" content="P2P通信を利用して、本部と複数の支端末の待ち時間をリアルタイムに同期・管理します。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wait.3y.f5.si/"> 
+    <meta property="og:image" content="https://wait.3y.f5.si/ogp-image.png"> 
+    <meta property="og:site_name" content="リアルタイム待ち時間管理システム">
+    <meta property="og:locale" content="ja_JP">
+    
+    <meta name="twitter:card" content="summary_large_image"> 
+    <meta name="twitter:title" content="リアルタイム待ち時間管理システム">
+    <meta name="twitter:description" content="P2P通信を利用して、本部と複数の支端末の待ち時間をリアルタイムに同期・管理します。">
+    <meta name="twitter:image" content="https://wait.3y.f5.si/ogp-image.png">
+    <title>リアルタイム待ち時間管理システム</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+        :root {
+            --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
+            --bg-surface: #f0f4f8;       /* 中央も完全に同じ色に統一しカード感を撤廃 */
+            --bg-panel: #ffffff;         /* 要素を際立たせるための高品位な白背景 */
+            --text-main: #1e293b;        /* 視認性の高い墨色 */
+            --text-sub: #64748b;         /* 上品なグレー */
+            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
+            --accent-hover: #2563eb;
+            --accent-red: #ef4444;       /* 警告・切断用の洗練された赤 */
+            --accent-red-hover: #dc2626;
+            --success-green: #10b981;
+            --border-soft: rgba(0, 0, 0, 0.06);
+            --toggle-bg: #e2e8f0;
+            --overlay-bg: rgba(15, 23, 42, 0.3); /* ダイアログ用の深みのある半透明ブラック */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 背景色を完全統一したシームレスな幅広のじか設置コンテナ */
+        .app-container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--bg-surface);
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: max-width 0.3s ease;
+        }
+
+        .app-container.fullscreen-preview {
+            max-width: 960px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-top: 28px;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            letter-spacing: 0.02em;
+        }
+
+        .description {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        /* 📢 運営からのお知らせ用スタイル（アコーディオン対応） */
+        .news-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-top: 24px;
+            margin-bottom: 24px;
+            text-align: left;
+            user-select: none;
+        }
+
+        .news-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .news-header:hover {
+            color: var(--text-main);
+        }
+
+        .news-title-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .news-chevron {
+            transition: transform 0.3s ease;
+            color: var(--text-sub);
+        }
+
+        .news-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .news-body {
+            display: none;
+            margin-top: 14px;
+            border-top: 1px dashed var(--border-soft);
+            padding-top: 12px;
+        }
+
+        .news-body.open {
+            display: block;
+        }
+
+        /* お知らせ読み込み中スピナー */
+        .news-loading-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 0;
+            color: var(--text-sub);
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .news-spinner-icon {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--toggle-bg);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        .news-empty-msg {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        .news-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .news-item {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border-bottom: 1px dashed var(--border-soft);
+            padding-bottom: 8px;
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .news-meta {
+            display: inline-flex;
+            gap: 8px;
+            margin-right: 8px;
+        }
+
+        .news-date {
+            color: var(--text-sub);
+            font-size: 0.78rem;
+        }
+
+        .news-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        /* 共通ボタン */
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            background-color: var(--accent-blue);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:disabled {
+            background-color: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn.secondary {
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+        }
+
+        .btn.secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+        .btn.secondary:disabled {
+            background-color: #f1f5f9;
+            color: #cbd5e1;
+            border-color: #e2e8f0;
+        }
+
+        .btn.danger {
+            background-color: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn.danger:hover {
+            background-color: var(--accent-red-hover);
+        }
+
+        .btn.sm {
+            padding: 8px 14px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+        }
+
+        /* パネル選択 */
+        .select-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+        }
+
+        .select-panel:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.08);
+        }
+
+        .panel-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(59, 130, 246, 0.06);
+            color: var(--accent-blue);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .panel-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .panel-content {
+            flex-grow: 1;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .panel-desc {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        /* 各種ボックス設定 */
+        .settings-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .segmented-control {
+            display: flex;
+            background: var(--toggle-bg);
+            padding: 3px;
+            border-radius: 8px;
+        }
+
+        .segment-btn {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .segment-btn.active {
+            background: #fff;
+            color: var(--text-main);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        /* フォーム */
+        .form-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+        }
+
+        .form-input:disabled {
+            background-color: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: var(--border-soft);
+        }
+
+        /* ディスプレイエリア */
+        .monitor-block {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 44px 20px;
+            margin: 24px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .huge-time {
+            font-size: 4.6rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .display-mode-text {
+            color: #000000 !important;
+        }
+
+        .side-text {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-sub);
+            margin: 0 8px;
+            vertical-align: middle;
+        }
+
+        .display-mode-text .side-text {
+            color: #000000 !important;
+            font-weight: 600;
+        }
+
+        .huge-sub {
+            font-size: 1.25rem;
+            color: var(--text-sub);
+            margin-top: 18px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--success-green);
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .grid-3x2 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .lock-text {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            text-align: center;
+            margin-top: 16px;
+            letter-spacing: 0.05em;
+        }
+
+        .action-bar-bottom {
+            margin-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* クライアント接続リストUI */
+        .client-list-container {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 24px;
+        }
+
+        .client-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .client-item:last-child {
+            border-bottom: none;
+        }
+
+        .client-meta {
+            text-align: left;
+        }
+
+        .client-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .client-id-sub {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-client-msg {
+            padding: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        /* QRコード表示用コンテナ */
+        .qr-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .qr-wrapper img {
+            border: 6px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* 📋 規約＆プライバシーポリシー同意エリア用スタイル */
+        .policy-agreement-box {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+            padding: 0 10px;
+        }
+        
+        .policy-agreement-box a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.15s ease;
+        }
+
+        .policy-agreement-box a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* 🌀 接続中ぐるぐる（スピナー）アニメーション */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 🏛️ 共通カスタムダイアログ構造（オーバーレイ） */
+        .custom-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .custom-dialog-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .custom-dialog-box {
+            background: #ffffff;
+            width: 90%;
+            max-width: 420px;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+            text-align: center;
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .custom-dialog-overlay.active .custom-dialog-box {
+            transform: scale(1);
+        }
+
+        .dialog-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .dialog-message {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 20px;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        /* Turnstile用のセンタリング用CSS */
+        .turnstile-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            min-height: 65px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="main-container">
+
+    <div id="screen-gate" class="screen active">
+        <h1>リアルタイム待ち時間管理</h1>
+        <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
+        
+        <div class="select-panel" onclick="openTurnstileDialog('admin')">
+            <div class="panel-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+            </div>
+            <div class="panel-content">
+                <div class="panel-title">本部管理者として開始</div>
+                <div class="panel-desc">新規通信ルームを立ち上げ、統括設定とPINコードを発行します。</div>
+            </div>
+        </div>
+
+        <div class="select-panel" onclick="openTurnstileDialog('client')">
+            <div class="panel-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" fill="currentColor"/></svg>
+            </div>
+            <div class="panel-content">
+                <div class="panel-title">支端末として接続</div>
+                <div class="panel-desc">本部に接続し、ディスプレイや現場操作リモコンとして連動します。</div>
+            </div>
+        </div>
+
+        <div id="news-container" class="news-box">
+            <div class="news-header" onclick="toggleNewsAccordion()">
+                <div class="news-title-group">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>
+                    <span>運営からのお知らせ</span>
+                </div>
+                <svg id="news-chevron" class="news-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+
+            <div id="news-body" class="news-body">
+                <div id="news-loading" class="news-loading-wrapper" style="display: none;">
+                    <span class="news-spinner-icon"></span>
+                    <span>読み込み中...</span>
+                </div>
+
+                <div id="news-empty-msg" class="news-empty-msg" style="display: none;">お知らせはありません。</div>
+
+                <ul id="news-list" class="news-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="policy-agreement-box">
+            上記のボタンを押して本システムを開始することで、<br>
+            <a href="terms.html" target="_blank">利用規約</a> および <a href="privacy.html" target="_blank">プライバシーポリシー</a> に同意したものとみなされます。
+        </div>
+    </div>
+
+    <div id="screen-client-setup" class="screen">
+        <h1>本部への接続設定</h1>
+        <p class="description">本部画面に表示されている「接続用ID」と「4桁のPIN」を入力してください。</p>
+        
+        <div class="form-group">
+            <label class="form-label">接続用ID (Peer ID)</label>
+            <input type="text" id="input-peer-id" class="form-input" placeholder="wait-xxxxxx">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">4桁の認証PINコード</label>
+            <input type="text" id="input-pin" class="form-input" placeholder="0000" maxlength="4" style="text-align: center; font-weight: bold; letter-spacing: 0.2em;">
+        </div>
+
+        <button class="btn" id="btn-establish-connection" onclick="connectToAdmin()">
+            <span id="btn-connect-spinner" class="spinner" style="display: none;"></span>
+            <span id="btn-connect-text">接続を確立する</span>
+        </button>
+        <button class="btn secondary" id="btn-setup-back" onclick="backToGate()" style="margin-top: 12px;">戻る</button>
+    </div>
+
+    <div id="screen-admin" class="screen">
+        <div class="status-badge"><span class="dot"></span>本部システム稼働中</div>
+        <div style="float: right; display: flex; gap: 8px;">
+            <button class="btn secondary sm" onclick="openQrDialog()" style="gap: 4px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 6h2v2h-2zm-2 2h2v2h-2zm-2-2h2v2h-2zm2 4h2v2h-2zm2-2h2v2h-2zm-4 0h2v2h-2zm4-4h2v2h-2zm-2-2h2v2h-2zm-2 2h2v2h-2z"/></svg>
+                接続QR表示
+            </button>
+            <button class="btn secondary sm" id="btn-toggle-preview" onclick="toggleAdminPreview()">客用大画面表示に切替</button>
+        </div>
+        <h1>本部コントロール</h1>
+        <p class="description" id="admin-info">通信を初期化中...</p>
+
+        <div class="settings-box" id="admin-settings-area">
+            <div class="setting-row">
+                <div class="setting-label">「約」の表示</div>
+                <div class="segmented-control">
+                    <button class="segment-btn active" id="about-on" onclick="changeStateSetting('showAbout', true)">付ける</button>
+                    <button class="segment-btn" id="about-off" onclick="changeStateSetting('showAbout', false)">付けない</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">「待ち組数」の表示</div>
+                <div class="segmented-control">
+                    <button class="segment-btn active" id="teams-on" onclick="changeStateSetting('showTeams', true)">表示する</button>
+                    <button class="segment-btn" id="teams-off" onclick="changeStateSetting('showTeams', false)">隠す</button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">現場の操作方式</div>
+                <div class="segmented-control">
+                    <button class="segment-btn active" id="ctrl-pace" onclick="changeStateSetting('controlMode', 'pace')">1組あたりの時間設定</button>
+                    <button class="segment-btn" id="ctrl-direct" onclick="changeStateSetting('controlMode', 'direct')">分単位を直接加減</button>
+                </div>
+            </div>
+            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
+                <div class="setting-label">画面の常時点灯（スリープ防止）</div>
+                <div class="segmented-control">
+                    <button class="segment-btn" id="wakelock-admin-on" onclick="toggleWakeLock(true, 'admin')">ON</button>
+                    <button class="segment-btn active" id="wakelock-admin-off" onclick="toggleWakeLock(false, 'admin')">OFF</button>
+                </div>
+            </div>
+            <div class="setting-row" style="margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 14px;">
+                <div class="setting-label">ロック解除パスワード</div>
+                <input type="text" id="admin-lock-password" class="form-input" value="1234" style="width: 140px; padding: 6px 10px; text-align: center;" onchange="updateLockPassword()">
+            </div>
+        </div>
+
+        <div class="monitor-block" id="admin-monitor">
+            <div style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 4px;" id="lbl-admin-title">現在の全体待ち時間</div>
+            <div class="huge-time" id="dom-admin-time-box">
+                <span class="side-text" id="txt-about-admin">約</span><span id="admin-time">0</span><span class="side-text">分</span>
+            </div>
+            <div class="huge-sub" id="box-admin-teams">計 <span id="admin-teams">0</span> 組待ち</div>
+            
+            <div id="box-admin-fullscreen-action" class="action-bar-bottom" style="display: none; width:100%;">
+                <div></div>
+                <button class="btn secondary sm" onclick="openCustomPrompt('admin-control')">管理者画面に戻る</button>
+            </div>
+        </div>
+
+        <div id="panel-pace-control">
+            <div class="form-group">
+                <label class="form-label">1組あたりの所要時間 (分)</label>
+                <input type="number" id="admin-pace" class="form-input" value="5" onchange="updatePace()">
+            </div>
+            <div class="flex-row">
+                <button class="btn" onclick="adjustMasterTeams(1)">+1組 追加</button>
+                <button class="btn secondary" onclick="adjustMasterTeams(-1)">-1組 消化</button>
+            </div>
+        </div>
+
+        <div id="panel-direct-control" style="display: none;">
+            <label class="form-label">待ち時間の直接操作</label>
+            <div class="grid-3x2">
+                <button class="btn sm" onclick="adjustDirectMinutes(1)">+1分</button>
+                <button class="btn sm" onclick="adjustDirectMinutes(5)">+5分</button>
+                <button class="btn sm" onclick="adjustDirectMinutes(10)">+10分</button>
+                <button class="btn sm secondary" onclick="adjustDirectMinutes(-1)">-1分</button>
+                <button class="btn sm secondary" onclick="adjustDirectMinutes(-5)">-5分</button>
+                <button class="btn sm secondary" onclick="adjustDirectMinutes(-10)">-10分</button>
+            </div>
+        </div>
+
+        <div id="admin-client-list-section">
+            <h2>接続中の支端末モニター 一覧</h2>
+            <div class="client-list-container" id="dom-client-list">
+                <div class="empty-client-msg">現在接続されている支端末はありません。</div>
+            </div>
+        </div>
+
+        <button class="btn danger" onclick="openCustomConfirm('close-admin')" style="margin-top: 24px;">本部システムを強制終了</button>
+    </div>
+
+    <div id="screen-client-choices" class="screen">
+        <div class="status-badge"><span class="dot"></span>本部と同期完了</div>
+        <h1>表示モードの決定</h1>
+        <p class="description">設置場所に合わせてモードを選択してください。いつでもこの画面に戻れます。</p>
+
+        <div class="select-panel" onclick="goClientMode('display')">
+            <div class="panel-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
+            </div>
+            <div class="panel-content">
+                <div class="panel-title">ディスプレイモードを開く</div>
+                <div class="panel-desc">来場客確認用。無駄な情報を排し、画面操作がロックされます。</div>
+            </div>
+        </div>
+
+        <div class="select-panel" onclick="goClientMode('staff')">
+            <div class="panel-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+            </div>
+            <div class="panel-content">
+                <div class="panel-title">スタッフ操作モードを開く</div>
+                <div class="panel-desc">行列現場のスタッフ用。手元からリアルタイムに加減算が行えます。</div>
+            </div>
+        </div>
+        
+        <button class="btn secondary" onclick="openCustomConfirm('reload')" style="margin-top: 24px;">切断して終了</button>
+    </div>
+
+    <div id="screen-display" class="screen">
+        <div class="monitor-block" style="padding: 60px 20px; background: var(--bg-panel); margin-bottom: 0;">
+            <div style="font-size: 0.9rem; color: var(--text-sub); letter-spacing: 0.05em; margin-bottom: 4px;">現在の待ち時間</div>
+            <div class="huge-time display-mode-text" id="dom-client-time-box">
+                <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
+            </div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
+        </div>
+        <p class="lock-text">表示ロック中</p>
+        
+        <div class="action-bar-bottom">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; color: var(--text-sub);">
+                <span>常時点灯</span>
+                <div class="segmented-control">
+                    <button class="segment-btn" id="wakelock-view-on" onclick="toggleWakeLock(true, 'view')">ON</button>
+                    <button class="segment-btn active" id="wakelock-view-off" onclick="toggleWakeLock(false, 'view')">OFF</button>
+                </div>
+            </div>
+            <button class="btn secondary sm" onclick="openCustomPrompt('choices')" style="width: auto;">モード変更</button>
+        </div>
+    </div>
+
+    <div id="screen-staff" class="screen">
+        <div class="status-badge" style="color: var(--accent-blue);">
+            <span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用
+        </div>
+        
+        <div style="float: right; display: flex; gap: 8px; align-items: center;">
+            <button class="btn secondary sm" onclick="returnToChoices()">モード変更</button>
+        </div>
+
+        <h1>リモートカウント制御</h1>
+
+        <div class="monitor-block">
+            <div class="huge-time">
+                <span class="side-text" id="txt-about-staff">約</span><span id="staff-time">0</span><span class="side-text">分</span>
+            </div>
+            <div class="huge-sub" id="box-staff-teams">計 <span id="staff-teams">0</span> 組待ち</div>
+        </div>
+
+        <div id="client-pace-box">
+            <div class="flex-row">
+                <button class="btn" onclick="sendRemoteAction('TEAM', 1)">+1組 追加</button>
+                <button class="btn secondary" onclick="sendRemoteAction('TEAM', -1)">-1組 消化</button>
+            </div>
+        </div>
+
+        <div id="client-direct-box" style="display: none;">
+            <div class="grid-3x2">
+                <button class="btn sm" onclick="sendRemoteAction('MIN', 1)">+1分</button>
+                <button class="btn sm" onclick="sendRemoteAction('MIN', 5)">+5分</button>
+                <button class="btn sm" onclick="sendRemoteAction('MIN', 10)">+10分</button>
+                <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -1)">-1分</button>
+                <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -5)">-5分</button>
+                <button class="btn sm secondary" onclick="sendRemoteAction('MIN', -10)">-10分</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="custom-dialog-overlay" class="custom-dialog-overlay">
+    <div class="custom-dialog-box" id="custom-dialog-box"></div>
+</div>
+
+<script>
+    let peer = null;
+    let masterRole = null; 
+    let correctPin = ""; 
+    let currentAdminId = ""; 
+    let connectedClients = []; 
+    let hostConnection = null; 
+    let isAdminFullscreen = false;
+    let clientNameCounter = 0; 
+    
+    // お知らせアコーディオン管理用のフラグとデータ保持
+    let isNewsAccordionOpen = false;
+    let isNewsFetched = false;
+    let cachedNewsData = null;
+
+    // 自動スリープ防止（Wake Lock オブジェクト）保持用
+    let wakeLockObj = null;
+
+    // スパム・多重起動負荷対策システム
+    const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
+    const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
+
+    let state = {
+        teams: 0,
+        pace: 5,
+        totalTime: 0,
+        showAbout: true,      
+        showTeams: true,      
+        controlMode: 'pace',
+        lockPassword: '1234'
+    };
+
+    let currentDialogContext = null;
+    let currentTargetPeerId = null;
+
+    // Turnstile用の変数設定
+    let turnstileWidgetId = null;
+    let selectedPendingRole = null;
+
+    // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join_id');
+        if (joinId) {
+            selectedPendingRole = 'client';
+            openTurnstileDialog('client', joinId);
+        } else {
+            // セキュリティ：起動時に開発者ツール防御システムを始動
+            startSecurityMonitor();
+        }
+    });
+
+    // 運営からのお知らせ アコーディオン開閉制御
+    async function toggleNewsAccordion() {
+        const chevron = document.getElementById('news-chevron');
+        const newsBody = document.getElementById('news-body');
+
+        isNewsAccordionOpen = !isNewsAccordionOpen;
+
+        if (isNewsAccordionOpen) {
+            chevron.classList.add('open');
+            newsBody.classList.add('open');
+
+            // まだデータを取得していない場合は取得＆スピナー表示を実行
+            if (!isNewsFetched) {
+                await fetchAndRenderNews();
+            }
+        } else {
+            chevron.classList.remove('open');
+            newsBody.classList.remove('open');
+        }
+    }
+
+    // news.json を非同期取得してスピナー演出付きで表示する関数
+    async function fetchAndRenderNews() {
+        const loadingEl = document.getElementById('news-loading');
+        const emptyMsgEl = document.getElementById('news-empty-msg');
+        const newsListEl = document.getElementById('news-list');
+
+        // UIをローディング状態に初期化
+        loadingEl.style.display = 'flex';
+        emptyMsgEl.style.display = 'none';
+        newsListEl.style.display = 'none';
+
+        // フェッチ開始時刻を記録（スピナーを0.6~0.9秒見せるための最小時間保持）
+        const startTime = Date.now();
+
+        try {
+            const response = await fetch(`news.json?_t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            if (response.ok) {
+                cachedNewsData = await response.json();
+            } else {
+                cachedNewsData = [];
+            }
+        } catch (e) {
+            cachedNewsData = [];
+        }
+
+        // 最低750ミリ秒（0.75秒）はスピナーを見せて自然な心地よい読み込み演出にする
+        const elapsedTime = Date.now() - startTime;
+        const targetDelay = 750; // 0.75秒
+        if (elapsedTime < targetDelay) {
+            await new Promise(resolve => setTimeout(resolve, targetDelay - elapsedTime));
+        }
+
+        // ローディング非表示
+        loadingEl.style.display = 'none';
+        isNewsFetched = true;
+
+        if (Array.isArray(cachedNewsData) && cachedNewsData.length > 0) {
+            newsListEl.innerHTML = cachedNewsData.map(item => `
+                <li class="news-item">
+                    <span class="news-meta">
+                        <span class="news-date">${item.date || ''}</span>
+                        ${item.category ? `<span class="news-badge">${item.category}</span>` : ''}
+                    </span>
+                    <span class="news-text">${item.message || ''}</span>
+                </li>
+            `).join('');
+            newsListEl.style.display = 'flex';
+        } else {
+            // お知らせ件数が0または取得不可時
+            emptyMsgEl.style.display = 'block';
+        }
+    }
+
+    // 誤操作による離脱・リロードの防止プロテクター
+    window.addEventListener('beforeunload', (e) => {
+        if (masterRole) {
+            releaseWakeLock(); // スリープ防止を安全に解除
+            unregisterActiveAdmin();
+            e.preventDefault();
+            e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
+        }
+    });
+
+    // スリープ防止（Wake Lock）の制御関数
+    async function toggleWakeLock(shouldLock, viewPrefix) {
+        document.getElementById(`wakelock-${viewPrefix}-on`).classList.toggle('active', shouldLock);
+        document.getElementById(`wakelock-${viewPrefix}-off`).classList.toggle('active', !shouldLock);
+
+        if (shouldLock) {
+            if ('wakeLock' in navigator) {
+                try {
+                    if (wakeLockObj) await wakeLockObj.release();
+                    wakeLockObj = await navigator.wakeLock.request('screen');
+                    wakeLockObj.addEventListener('release', () => {
+                        console.log('Wake Lock was released');
+                    });
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                    openCustomAlert("設定エラー", "お使いの端末・ブラウザが自動スリープ防止機能に対応していないか、またはバッテリー制限により拒否されました。");
+                    toggleWakeLock(false, viewPrefix);
+                }
+            } else {
+                openCustomAlert("非対応環境", "このブラウザまたは端末は、画面の常時点灯機能（Wake Lock）に対応していません。端末自体の設定で自動スリープをオフにしてください。");
+                toggleWakeLock(false, viewPrefix);
+            }
+        } else {
+            await releaseWakeLock();
+        }
+    }
+
+    async function releaseWakeLock() {
+        if (wakeLockObj) {
+            try {
+                await wakeLockObj.release();
+                wakeLockObj = null;
+            } catch(e){}
+        }
+    }
+
+    function openCustomAlert(title, message) {
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">${title}</div>
+            <div class="dialog-message">${message}</div>
+            <button class="btn" onclick="closeCustomDialog()">確認</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    function openQrDialog() {
+        if (!currentAdminId) return;
+        
+        const baseUrl = window.location.origin + window.location.pathname;
+        const scanUrl = `${baseUrl}?join_id=${currentAdminId}`;
+
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">支端末 連動用QRコード</div>
+            <div class="dialog-message">別端末の「カメラアプリ」でこのQRコードをスキャンしてください。自動的にIDが入力された状態で接続画面が開きます。</div>
+            <div class="qr-wrapper" id="dom-qr-target"></div>
+            <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:18px; word-break:break-all; background:var(--bg-main); padding:8px; border-radius:6px;">
+                PIN: <strong style="color:var(--accent-blue); font-size:0.9rem;">${correctPin}</strong>
+            </div>
+            <button class="btn secondary" onclick="closeCustomDialog()">閉じる</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+
+        new QRCode(document.getElementById("dom-qr-target"), {
+            text: scanUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#1e293b",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+
+    function openCustomConfirm(actionType, extraData = null) {
+        currentDialogContext = actionType;
+        currentTargetPeerId = extraData;
+        const box = document.getElementById('custom-dialog-box');
+        
+        let title = "確認";
+        let message = "";
+        let confirmText = "実行する";
+        let isDanger = false;
+
+        if (actionType === 'reload') {
+            title = "通信の切断";
+            message = "本部との通信セッションを切断し、最初の選択画面に戻りますか？";
+            confirmText = "切断する";
+        } else if (actionType === 'kick-confirm') {
+            title = "支端末の切断確認";
+            message = `指定された支端末「${extraData.name}」を本当に切り離しますか？`;
+            confirmText = "切断を強制執行";
+            isDanger = true;
+        } else if (actionType === 'close-admin') {
+            title = "本部の完全終了";
+            message = "本当に本部システムをクローズしますか？現在接続しているすべての支端末・モニター画面も強制同期解除され切断されます。";
+            confirmText = "本部をクローズする";
+            isDanger = true;
+        }
+        
+        box.innerHTML = `
+            <div class="dialog-title">${title}</div>
+            <div class="dialog-message">${message}</div>
+            <div class="flex-row">
+                <button class="btn ${isDanger ? 'danger' : ''}" onclick="handleCustomConfirmResult(true)">${confirmText}</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    function handleCustomConfirmResult(isYes) {
+        closeCustomDialog();
+        if (!isYes) return;
+
+        if (currentDialogContext === 'reload') {
+            releaseWakeLock();
+            unregisterActiveAdmin();
+            location.reload();
+        } else if (currentDialogContext === 'kick-confirm') {
+            executeKickClient(currentTargetPeerId.id);
+        } else if (currentDialogContext === 'close-admin') {
+            executeCloseAdminMaster();
+        }
+    }
+
+    function openCustomPrompt(targetAction) {
+        currentDialogContext = targetAction;
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">管理ロックの解除</div>
+            <div class="dialog-message">設定されたパスワードを入力してください。</div>
+            <div class="form-group">
+                <input type="text" id="dialog-prompt-input" class="form-input" style="text-align:center; font-size:1.2rem; letter-spacing:0.1em;" autofocus autocomplete="off">
+            </div>
+            <div class="flex-row">
+                <button class="btn" onclick="handleCustomPromptResult()">解除</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+        setTimeout(() => document.getElementById('dialog-prompt-input').focus(), 50);
+    }
+
+    function handleCustomPromptResult() {
+        const inputVal = document.getElementById('dialog-prompt-input').value.trim();
+        if (inputVal === state.lockPassword) {
+            closeCustomDialog();
+            if (currentDialogContext === 'choices') {
+                returnToChoices();
+            } else if (currentDialogContext === 'admin-control') {
+                toggleAdminPreview(true);
+            }
+        } else {
+            document.getElementById('dialog-prompt-input').value = "";
+            openCustomAlert("認証エラー", "パスワードが正しくありません。");
+        }
+    }
+
+    function openMessagePrompt(peerId, displayName) {
+        currentDialogContext = 'send-msg';
+        currentTargetPeerId = peerId;
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">${displayName} へメッセージ送信</div>
+            <div class="dialog-message">端末の画面にポップアップ表示するテキストを入力してください。</div>
+            <div class="form-group">
+                <input type="text" id="dialog-msg-input" class="form-input" placeholder="例：受付を一時中断してください" autocomplete="off">
+            </div>
+            <div class="flex-row">
+                <button class="btn" onclick="submitMessageToClient()">送信する</button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+        setTimeout(() => document.getElementById('dialog-msg-input').focus(), 50);
+    }
+
+    function submitMessageToClient() {
+        const text = document.getElementById('dialog-msg-input').value.trim();
+        if(!text) {
+            openCustomAlert("入力エラー", "メッセージ内容が空です。");
+            return;
+        }
+        closeCustomDialog();
+        
+        const conn = connectedClients.find(c => c.peer === currentTargetPeerId);
+        if(conn && conn.open) {
+            conn.send({ type: 'DIRECT_MESSAGE', message: text });
+            openCustomAlert("送信完了", "端末にメッセージを配信しました。");
+        } else {
+            openCustomAlert("エラー", "対象の端末との通信が見つかりません。");
+        }
+    }
+
+    function closeCustomDialog() {
+        if (turnstileWidgetId !== null) {
+            try { turnstile.remove(turnstileWidgetId); } catch(e){}
+            turnstileWidgetId = null;
+        }
+        document.getElementById('custom-dialog-overlay').classList.remove('active');
+    }
+
+    function navigate(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    function backToGate() {
+        releaseWakeLock();
+        if(peer) peer.destroy();
+        window.history.replaceState({}, document.title, window.location.pathname);
+        location.reload();
+    }
+
+    function getActiveAdminCount() {
+        cleanExpiredAdmins();
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        return list.length;
+    }
+
+    function registerActiveAdmin() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        list.push({ instanceId: currentInstanceId, timestamp: Date.now() });
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+        antiSpamChannel.postMessage({ type: 'PING' });
+    }
+
+    function unregisterActiveAdmin() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        list = list.filter(item => item.instanceId !== currentInstanceId);
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+    }
+
+    function cleanExpiredAdmins() {
+        let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+        const now = Date.now();
+        list = list.filter(item => (now - item.timestamp) < 60000);
+        localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+    }
+
+    antiSpamChannel.onmessage = (e) => {
+        if (e.data.type === 'PING' && masterRole === 'admin') {
+            let list = JSON.parse(localStorage.getItem('wait_system_active_admins') || '[]');
+            let mine = list.find(item => item.instanceId === currentInstanceId);
+            if (mine) mine.timestamp = Date.now();
+            localStorage.setItem('wait_system_active_admins', JSON.stringify(list));
+        }
+    };
+
+    setInterval(cleanExpiredAdmins, 10000);
+
+    function openTurnstileDialog(role, autoJoinId = null) {
+        selectedPendingRole = role;
+        
+        if (role === 'admin' && getActiveAdminCount() >= 3) {
+            openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+            return;
+        }
+
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">セキュリティ確認</div>
+            <div class="dialog-message">システム保護のため、以下のチェックを完了してください。</div>
+            <div class="turnstile-container">
+                <div id="cf-turnstile-element"></div>
+            </div>
+            <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+
+        setTimeout(() => {
+            if (!window.turnstile) {
+                box.innerHTML += `<p style="color:var(--accent-red); font-size:0.8rem; margin-top:10px;">Turnstileスクリプトの読み込みに失敗しました。再読み込みしてください。</p>`;
+                return;
+            }
+            
+            turnstileWidgetId = turnstile.render('#cf-turnstile-element', {
+                sitekey: '0x4AAAAAADx7joy7nbPtTI0d',
+                theme: 'light',
+                callback: function(token) {
+                    setTimeout(() => {
+                        closeCustomDialog();
+                        executeRoleTransition(role, autoJoinId);
+                    }, 1500);
+                },
+                'error-callback': function() {
+                    openCustomAlert("認証エラー", "セキュリティチェック中にエラーが発生しました。時間を置いて再度お試しください。");
+                }
+            });
+        }, 100);
+    }
+
+    function executeRoleTransition(role, autoJoinId = null) {
+        if (role === 'admin') {
+            registerActiveAdmin();
+            masterRole = 'admin';
+            initAdminPeer();
+        } else {
+            masterRole = 'client';
+            navigate('screen-client-setup');
+            
+            if (autoJoinId) {
+                const idInput = document.getElementById('input-peer-id');
+                if (idInput) {
+                    idInput.value = autoJoinId;
+                    setTimeout(() => {
+                        const pinInput = document.getElementById('input-pin');
+                        if (pinInput) pinInput.focus();
+                    }, 400);
+                }
+            } else {
+                startSecurityMonitor();
+            }
+        }
+    }
+
+    function selectRole(role) {
+        openTurnstileDialog(role);
+    }
+
+    // 1. 本部ホスト起動
+    function initAdminPeer() {
+        navigate('screen-admin');
+        currentAdminId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
+        correctPin = String(Math.floor(1000 + Math.random() * 9000));
+
+        document.getElementById('admin-info').innerHTML = 
+            `接続ID: <strong style="color:var(--text-main);">${currentAdminId}</strong> | 認証PIN: <strong style="color:var(--accent-blue);">${correctPin}</strong>`;
+
+        peer = new Peer(currentAdminId, {
+            host: 'wait-peer-server.onrender.com',
+            port: 443,
+            path: '/myapp',
+            secure: true,
+            debug: 3
+        });
+        
+        peer.on('connection', (conn) => {
+            conn.on('data', (data) => {
+                if (data.type === 'REQ_AUTH') {
+                    if (data.pin === correctPin) {
+                        clientNameCounter++;
+                        conn.displayName = `端末 - ${clientNameCounter}`;
+                        conn.send({ type: 'AUTH_OK', state: state });
+                        connectedClients.push(conn);
+                        renderClientList();
+                    } else {
+                        conn.send({ type: 'AUTH_NG' });
+                    }
+                }
+                if (data.type === 'ACTION_ADJUST') {
+                    if (data.mode === 'TEAM') adjustMasterTeams(data.amount);
+                    else if (data.mode === 'MIN') adjustDirectMinutes(data.amount);
+                }
+            });
+            conn.on('close', () => {
+                connectedClients = connectedClients.filter(c => c.peer !== conn.peer);
+                renderClientList();
+            });
+        });
+    }
+
+    function renderClientList() {
+        const listDiv = document.getElementById('dom-client-list');
+        if(!listDiv) return;
+
+        if(connectedClients.length === 0) {
+            listDiv.innerHTML = `<div class="empty-client-msg">現在接続されている支端末はありません。</div>`;
+            return;
+        }
+
+        let html = '';
+        connectedClients.forEach(conn => {
+            html += `
+                <div class="client-item" id="item-${conn.peer}">
+                    <div class="client-meta">
+                        <div class="client-name">${conn.displayName}</div>
+                        <div class="client-id-sub">ID: ${conn.peer}</div>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn secondary sm" onclick="openMessagePrompt('${conn.peer}', '${conn.displayName}')">メッセージ送信</button>
+                        <button class="btn danger sm" onclick="openCustomConfirm('kick-confirm', {id: '${conn.peer}', name: '${conn.displayName}'})">切断</button>
+                    </div>
+                </div>
+            `;
+        });
+        listDiv.innerHTML = html;
+    }
+
+    function executeKickClient(peerId) {
+        const conn = connectedClients.find(c => c.peer === peerId);
+        if(conn) {
+            conn.send({ type: 'KICKED_BY_ADMIN' });
+            setTimeout(() => {
+                conn.close();
+                connectedClients = connectedClients.filter(c => c.peer !== peerId);
+                renderClientList();
+            }, 200);
+        }
+    }
+
+    function executeCloseAdminMaster() {
+        connectedClients.forEach(conn => {
+            if (conn.open) {
+                conn.send({ type: 'ADMIN_CLOSED_FORCED' });
+                conn.close();
+            }
+        });
+        releaseWakeLock();
+        unregisterActiveAdmin();
+        if(peer) peer.destroy();
+        window.history.replaceState({}, document.title, window.location.pathname);
+        location.reload();
+    }
+
+    // 2. 支端末接続
+    function connectToAdmin() {
+        const targetId = document.getElementById('input-peer-id').value.trim();
+        const pinVal = document.getElementById('input-pin').value.trim();
+
+        if (!targetId || !pinVal) {
+            openCustomAlert("入力エラー", "接続用IDとPINを両方入力してください。");
+            return;
+        }
+
+        setConnectionLoadingState(true);
+
+        peer = new Peer({
+            host: 'wait-peer-server.onrender.com',
+            port: 443,
+            path: '/myapp',
+            secure: true,
+            debug: 3
+        });
+        
+        let timeoutGuard = setTimeout(() => {
+            if (masterRole === 'client' && document.getElementById('screen-client-setup').classList.contains('active')) {
+                openCustomAlert("タイムアウト", "接続要求がタイムアウトしました。IDが正しいか、または本部の電波状況を確認してください。");
+                setConnectionLoadingState(false);
+                if(peer) peer.destroy();
+            }
+        }, 8000);
+
+        peer.on('open', () => {
+            const conn = peer.connect(targetId);
+            hostConnection = conn;
+
+            conn.on('open', () => {
+                conn.send({ type: 'REQ_AUTH', pin: pinVal });
+            });
+
+            conn.on('data', (data) => {
+                clearTimeout(timeoutGuard);
+
+                if (data.type === 'AUTH_OK') {
+                    setConnectionLoadingState(false);
+                    state = data.state;
+                    applyStateToUI();
+                    navigate('screen-client-choices');
+                }
+                if (data.type === 'AUTH_NG') {
+                    setConnectionLoadingState(false);
+                    openCustomAlert("認証失敗", "認証PINコードが一致しませんでした。");
+                    peer.destroy();
+                }
+                if (data.type === 'BROADCAST_SYNC') {
+                    state = data.state;
+                    applyStateToUI();
+                }
+                if (data.type === 'DIRECT_MESSAGE') {
+                    openCustomAlert("本部からの通達", data.message);
+                }
+                if (data.type === 'KICKED_BY_ADMIN') {
+                    openCustomAlert("切断のお知らせ", "本部管理者によって接続が切り離されました。");
+                    setTimeout(() => {
+                        releaseWakeLock();
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        location.reload();
+                    }, 3000);
+                }
+                if (data.type === 'ADMIN_CLOSED_FORCED') {
+                    openCustomAlert("システム終了", "本部システムが終了したため、通信を安全に停止しました。");
+                    setTimeout(() => {
+                        releaseWakeLock();
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        location.reload();
+                    }, 3000);
+                }
+            });
+
+            conn.on('close', () => {
+                clearTimeout(timeoutGuard);
+                setConnectionLoadingState(false);
+                openCustomAlert("切断検知", "本部との接続が切断されました。");
+                setTimeout(() => {
+                    releaseWakeLock();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    location.reload();
+                }, 1500);
+            });
+        });
+        
+        peer.on('error', (err) => {
+            clearTimeout(timeoutGuard);
+            setConnectionLoadingState(false);
+            openCustomAlert("接続エラー", "本部が見つかりません。IDを確認するか、通信環境をお確かめください。");
+        });
+    }
+
+    function setConnectionLoadingState(isLoading) {
+        const btnConnect = document.getElementById('btn-establish-connection');
+        const btnSpinner = document.getElementById('btn-connect-spinner');
+        const btnText = document.getElementById('btn-connect-text');
+        const btnBack = document.getElementById('btn-setup-back');
+        const inputId = document.getElementById('input-peer-id');
+        const inputPin = document.getElementById('input-pin');
+
+        if (isLoading) {
+            btnConnect.disabled = true;
+            btnBack.disabled = true;
+            inputId.disabled = true;
+            inputPin.disabled = true;
+            btnSpinner.style.display = "inline-block";
+            btnText.innerText = "接続中...";
+        } else {
+            btnConnect.disabled = false;
+            btnBack.disabled = false;
+            inputId.disabled = false;
+            inputPin.disabled = false;
+            btnSpinner.style.display = "none";
+            btnText.innerText = "接続を確立する";
+        }
+    }
+
+    function goClientMode(mode) {
+        releaseWakeLock().then(() => {
+            const wlViewOn = document.getElementById('wakelock-view-on');
+            const wlViewOff = document.getElementById('wakelock-view-off');
+            const wlStaffOn = document.getElementById('wakelock-staff-on');
+            const wlStaffOff = document.getElementById('wakelock-staff-off');
+
+            if (wlViewOn) wlViewOn.classList.remove('active');
+            if (wlViewOff) wlViewOff.classList.add('active');
+            if (wlStaffOn) wlStaffOn.classList.remove('active');
+            if (wlStaffOff) wlStaffOff.classList.add('active');
+
+            if (mode === 'display') navigate('screen-display');
+            else navigate('screen-staff');
+        });
+    }
+
+    function returnToChoices() {
+        releaseWakeLock().then(() => {
+            navigate('screen-client-choices');
+        });
+    }
+
+    // 3. 各種設定更新
+    function changeStateSetting(key, value) {
+        state[key] = value;
+        
+        if(key === 'showAbout') {
+            document.getElementById('about-on').classList.toggle('active', value === true);
+            document.getElementById('about-off').classList.toggle('active', value === false);
+        } else if(key === 'showTeams') {
+            document.getElementById('teams-on').classList.toggle('active', value === true);
+            document.getElementById('teams-off').classList.toggle('active', value === false);
+        } else if(key === 'controlMode') {
+            document.getElementById('ctrl-pace').classList.toggle('active', value === 'pace');
+            document.getElementById('ctrl-direct').classList.toggle('active', value === 'direct');
+        }
+        
+        recalculateTotal();
+    }
+
+    function updateLockPassword() {
+        const pwdInput = document.getElementById('admin-lock-password');
+        if (pwdInput) {
+            state.lockPassword = pwdInput.value.trim();
+            broadcastToAll();
+        }
+    }
+
+    function adjustMasterTeams(amount) {
+        state.teams += amount;
+        if (state.teams < 0) state.teams = 0;
+        recalculateTotal();
+    }
+
+    function adjustDirectMinutes(amount) {
+        state.totalTime += amount;
+        if (state.totalTime < 0) state.totalTime = 0;
+        applyStateToUI();
+        broadcastToAll();
+    }
+
+    function updatePace() {
+        const pInput = document.getElementById('admin-pace');
+        if (pInput) {
+            const val = parseInt(pInput.value);
+            if (!isNaN(val)) {
+                state.pace = val;
+                recalculateTotal();
+            }
+        }
+    }
+
+    function recalculateTotal() {
+        if (state.controlMode === 'pace') {
+            state.totalTime = state.teams * state.pace;
+        }
+        applyStateToUI();
+        broadcastToAll();
+    }
+
+    function broadcastToAll() {
+        if (masterRole === 'admin') {
+            connectedClients.forEach(conn => {
+                if (conn.open) conn.send({ type: 'BROADCAST_SYNC', state: state });
+            });
+        }
+    }
+
+    function sendRemoteAction(mode, amount) {
+        if (hostConnection && hostConnection.open) {
+            hostConnection.send({ type: 'ACTION_ADJUST', mode: mode, amount: amount });
+        }
+    }
+
+    function applyStateToUI() {
+        const renderNumbers = {
+            'admin-time': state.totalTime, 'admin-teams': state.teams,
+            'view-time': state.totalTime, 'view-teams': state.teams,
+            'staff-time': state.totalTime, 'staff-teams': state.teams
+        };
+        for (let id in renderNumbers) {
+            let el = document.getElementById(id);
+            if (el) el.innerText = renderNumbers[id];
+        }
+
+        const pwdInput = document.getElementById('admin-lock-password');
+        if (pwdInput && masterRole !== 'admin') {
+            pwdInput.value = state.lockPassword;
+        }
+
+        const aboutDisplay = state.showAbout ? "inline" : "none";
+        document.getElementById('txt-about-admin').style.display = aboutDisplay;
+        document.getElementById('txt-about-view').style.display = aboutDisplay;
+        document.getElementById('txt-about-staff').style.display = aboutDisplay;
+
+        const teamsDisplay = state.showTeams ? "block" : "none";
+        document.getElementById('box-admin-teams').style.display = teamsDisplay;
+        document.getElementById('box-view-teams').style.display = teamsDisplay;
+        document.getElementById('box-staff-teams').style.display = teamsDisplay;
+
+        const isPace = (state.controlMode === 'pace');
+        document.getElementById('panel-pace-control').style.display = isPace ? "block" : "none";
+        document.getElementById('panel-direct-control').style.display = isPace ? "none" : "block";
+        document.getElementById('client-pace-box').style.display = isPace ? "block" : "none";
+        document.getElementById('client-direct-box').style.display = isPace ? "none" : "block";
+    }
+
+    // 4. 本部フルスクリーン
+    function toggleAdminPreview(forceClose = false) {
+        const container = document.getElementById('main-container');
+        const info = document.getElementById('admin-info');
+        const settings = document.getElementById('admin-settings-area');
+        const paceCtrl = document.getElementById('panel-pace-control');
+        const directCtrl = document.getElementById('panel-direct-control');
+        const btn = document.getElementById('btn-toggle-preview');
+        const monitor = document.getElementById('admin-monitor');
+        const adminTimeBox = document.getElementById('dom-admin-time-box');
+        const fullscreenAction = document.getElementById('box-admin-fullscreen-action');
+        const listSection = document.getElementById('admin-client-list-section');
+        const closeAdminBtn = document.querySelector('#screen-admin > .btn.danger');
+        const qrShowBtn = document.querySelector('button[onclick="openQrDialog()"]');
+
+        if (forceClose) {
+            isAdminFullscreen = true;
+        }
+
+        isAdminFullscreen = !isAdminFullscreen;
+
+        if (isAdminFullscreen) {
+            container.classList.add('fullscreen-preview');
+            info.style.display = "none";
+            settings.style.display = "none";
+            paceCtrl.style.display = "none";
+            directCtrl.style.display = "none";
+            listSection.style.display = "none";
+            if(closeAdminBtn) closeAdminBtn.style.display = "none";
+            if(qrShowBtn) qrShowBtn.style.display = "none";
+            btn.style.display = "none";
+            monitor.style.padding = "80px 20px";
+            monitor.style.background = "#ffffff";
+            adminTimeBox.classList.add('display-mode-text');
+            document.querySelector('#admin-monitor .huge-time').style.fontSize = "6rem";
+            fullscreenAction.style.display = "flex";
+        } else {
+            container.classList.remove('fullscreen-preview');
+            info.style.display = "block";
+            settings.style.display = "block";
+            listSection.style.display = "block";
+            if(closeAdminBtn) closeAdminBtn.style.display = "block";
+            if(qrShowBtn) qrShowBtn.style.display = "block";
+            btn.style.display = "block";
+            document.querySelector('#admin-monitor .huge-time').style.fontSize = "4.6rem";
+            monitor.style.padding = "44px 20px";
+            monitor.style.background = "var(--bg-panel)";
+            adminTimeBox.classList.remove('display-mode-text');
+            fullscreenAction.style.display = "none";
+            btn.innerText = "客用大画面表示に切替";
+            applyStateToUI();
+        }
+    }
+
+    // 5. セキュリティ：開発者ツール検知・防御・ロックシステム
+    function startSecurityMonitor() {
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                (e.metaKey && e.altKey && (e.key === 'i' || e.key === 'j'))) {
+                e.preventDefault();
+                triggerSecurityAlert();
+            }
+        });
+
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        let threshold = 160;
+        setInterval(() => {
+            if (window.outerWidth - window.innerWidth > threshold || 
+                window.outerHeight - window.innerHeight > threshold) {
+                triggerSecurityAlert();
+            }
+        }, 1500);
+
+        setInterval(() => {
+            let start = performance.now();
+            debugger;
+            let end = performance.now();
+            if (end - start > 100) {
+                triggerSecurityAlert();
+            }
+        }, 1000);
+    }
+
+    function triggerSecurityAlert() {
+        const overlay = document.getElementById('custom-dialog-overlay');
+        const box = document.getElementById('custom-dialog-box');
+        
+        if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
+
+        box.innerHTML = `
+            <div id="sec-warning-flag" style="display:none;"></div>
+            <div class="dialog-title" style="color:var(--accent-red);">開発者ツールを検知しました</div>
+            <div class="dialog-message" style="text-align:left; font-weight:600;">
+                本システムのWEB上でのコード解析はお控えいただきますよう、お願いいたします。コードはGitHubにて公開しております。<br>
+                速やかに開発者ツールを閉じ、ページを再読み込みしてください。
+            </div>
+            <button class="btn danger" onclick="location.reload()">再読み込み</button>
+        `;
+        overlay.classList.add('active');
+    }
+</script>
+
+</body>
+</html>
