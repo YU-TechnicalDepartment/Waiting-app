@@ -100,7 +100,7 @@
             line-height: 1.6;
         }
 
-        /* 📢 運営からのお知らせ用スタイル（アコーディオン対応） */
+        /* 運営からのお知らせ用スタイル（アコーディオン対応） */
         .news-box {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -568,7 +568,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* 📋 規約＆プライバシーポリシー同意エリア用スタイル */
+        /* 規約＆プライバシーポリシー同意エリア用スタイル */
         .policy-agreement-box {
             margin-top: 16px;
             text-align: center;
@@ -590,7 +590,7 @@
             text-decoration: underline;
         }
 
-        /* 🌀 接続中ぐるぐる（スピナー）アニメーション */
+        /* 接続中ぐるぐる（スピナー）アニメーション */
         .spinner {
             width: 18px;
             height: 18px;
@@ -605,7 +605,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* 🏛️ 共通カスタムダイアログ構造（オーバーレイ） */
+        /* 共通カスタムダイアログ構造（オーバーレイ） */
         .custom-dialog-overlay {
             position: fixed;
             top: 0;
@@ -731,7 +731,7 @@
         <p class="description">本部画面に表示されている「接続用ID」と「4桁のPIN」を入力してください。</p>
         
         <div class="form-group">
-            <label class="form-label">接続用ID (Peer ID)</label>
+            <label class="form-label">接続用ID</label>
             <input type="text" id="input-peer-id" class="form-input" placeholder="wait-xxxxxx">
         </div>
 
@@ -809,7 +809,7 @@
 
         <div id="panel-pace-control">
             <div class="form-group">
-                <label class="form-label">1組あたりの所要時間 (分)</label>
+                <label class="form-label">1組あたりの所要時間 （分）</label>
                 <input type="number" id="admin-pace" class="form-input" value="5" onchange="updatePace()">
             </div>
             <div class="flex-row">
@@ -1131,7 +1131,7 @@
         const box = document.getElementById('custom-dialog-box');
         box.innerHTML = `
             <div class="dialog-title">支端末 連動用QRコード</div>
-            <div class="dialog-message">別端末の「カメラアプリ」でこのQRコードをスキャンしてください。自動的にIDが入力された状態で接続画面が開きます。</div>
+            <div class="dialog-message">別端末の「カメラアプリ」などでこのQRコードをスキャンしてください。自動的にIDが入力された状態で接続画面が開きます。</div>
             <div class="qr-wrapper" id="dom-qr-target"></div>
             <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:18px; word-break:break-all; background:var(--bg-main); padding:8px; border-radius:6px;">
                 PIN: <strong style="color:var(--accent-blue); font-size:0.9rem;">${correctPin}</strong>
@@ -1243,7 +1243,7 @@
             <div class="dialog-title">${displayName} へメッセージ送信</div>
             <div class="dialog-message">端末の画面にポップアップ表示するテキストを入力してください。</div>
             <div class="form-group">
-                <input type="text" id="dialog-msg-input" class="form-input" placeholder="例：受付を一時中断してください" autocomplete="off">
+                <input type="text" id="dialog-msg-input" class="form-input" placeholder="メッセージを入力..." autocomplete="off">
             </div>
             <div class="flex-row">
                 <button class="btn" onclick="submitMessageToClient()">送信する</button>
@@ -1332,7 +1332,7 @@
         selectedPendingRole = role;
         
         if (role === 'admin' && getActiveAdminCount() >= 3) {
-            openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末(ブラウザ)から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
+            openCustomAlert("サーバー保護制限", "スパム負荷を避けるため、1つの端末（ブラウザ）から同時に作成できる本部は最大3つまでに制限されています。既存の本部タブを閉じてから再度お試しください。");
             return;
         }
 
