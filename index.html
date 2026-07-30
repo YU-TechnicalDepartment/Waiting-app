@@ -21,50 +21,27 @@
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         :root {
-            --bg-main: #f0f4f8;          /* 爽やかでフラットな薄いブルーグレー */
-            --bg-surface: #f0f4f8;       /* 中央も完全に同じ色に統一しカード感を撤廃 */
-            --bg-panel: #ffffff;         /* 要素を際立たせるための高品位な白背景 */
-            --text-main: #1e293b;        /* 視認性の高い墨色 */
-            --text-sub: #64748b;         /* 上品なグレー */
-            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー (デフォルト) */
+            /* 【テーマカラー設定エリア】
+               背景色を変える場合は --bg-main を変更し、それに伴い --toggle-bg や --border-soft も調和する色に設定できます。
+            */
+            --bg-main: #f0f4f8;          /* 全体背景（薄いブルーグレー） */
+            --bg-surface: var(--bg-main);/* コンテナ背景（全体背景と統一） */
+            --bg-panel: #ffffff;         /* 要素・カード用パネル白背景 */
+            
+            --text-main: #1e293b;        /* メイン文字色（墨色） */
+            --text-sub: #64748b;         /* サブ文字色（上品なグレー） */
+            
+            --accent-blue: #3b82f6;      /* アクセントカラー（PINコード・主要ボタン） */
             --accent-hover: #2563eb;
-            --accent-red: #ef4444;       /* 警告・切断用の洗練された赤 */
+            --accent-red: #ef4444;       /* 警告・切断用の赤 */
             --accent-red-hover: #dc2626;
             --success-green: #10b981;
-            --border-soft: rgba(0, 0, 0, 0.06);
-            --toggle-bg: #e2e8f0;
-            --overlay-bg: rgba(15, 23, 42, 0.3); /* ダイアログ用の深みのある半透明ブラック */
-            --accent-light: rgba(59, 130, 246, 0.06);
-            --accent-badge-bg: rgba(59, 130, 246, 0.1);
-        }
-
-        /* テーマ切り替え用の設定（明度や雰囲気を揃えたカラー） */
-        [data-theme="emerald"] {
-            --accent-blue: #10b981;
-            --accent-hover: #059669;
-            --accent-light: rgba(16, 185, 129, 0.06);
-            --accent-badge-bg: rgba(16, 185, 129, 0.1);
-        }
-
-        [data-theme="violet"] {
-            --accent-blue: #8b5cf6;
-            --accent-hover: #7c3aed;
-            --accent-light: rgba(139, 92, 246, 0.06);
-            --accent-badge-bg: rgba(139, 92, 246, 0.1);
-        }
-
-        [data-theme="rose"] {
-            --accent-blue: #f43f5e;
-            --accent-hover: #e11d48;
-            --accent-light: rgba(244, 63, 94, 0.06);
-            --accent-badge-bg: rgba(244, 63, 94, 0.1);
-        }
-
-        [data-theme="amber"] {
-            --accent-blue: #d97706;
-            --accent-hover: #b45309;
-            --accent-light: rgba(217, 119, 6, 0.06);
-            --accent-badge-bg: rgba(217, 119, 6, 0.1);
+            
+            /* 背景色の色味に連動する要素のカラー構成 */
+            --border-soft: rgba(30, 41, 59, 0.08); /* 背景と馴染む柔らかな境界線 */
+            --toggle-bg: #e2e8f0;                  /* トグルスイッチのベース背景色 */
+            --toggle-hover: #cbd5e1;               /* トグル非選択時のホバー色 */
+            --overlay-bg: rgba(15, 23, 42, 0.35);   /* ダイアログオーバーレイ */
         }
 
         * {
@@ -131,7 +108,7 @@
             line-height: 1.6;
         }
 
-        /* 運営からのお知らせ用スタイル（アコーディオン対応） */
+        /* 運営からのお知らせ用スタイル */
         .news-box {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -184,7 +161,6 @@
             display: block;
         }
 
-        /* お知らせ読み込み中スピナー */
         .news-loading-wrapper {
             display: flex;
             align-items: center;
@@ -243,7 +219,7 @@
         }
 
         .news-badge {
-            background: var(--accent-badge-bg);
+            background: rgba(59, 130, 246, 0.1);
             color: var(--accent-blue);
             padding: 1px 6px;
             border-radius: 4px;
@@ -274,9 +250,10 @@
         }
 
         .btn:disabled {
-            background-color: #cbd5e1;
-            color: #94a3b8;
+            background-color: var(--toggle-bg);
+            color: var(--text-sub);
             cursor: not-allowed;
+            opacity: 0.7;
         }
 
         .btn.secondary {
@@ -286,13 +263,14 @@
         }
 
         .btn.secondary:hover {
-            background-color: #e2e8f0;
+            background-color: var(--toggle-bg);
         }
 
         .btn.secondary:disabled {
-            background-color: #f1f5f9;
-            color: #cbd5e1;
-            border-color: #e2e8f0;
+            background-color: var(--bg-panel);
+            color: var(--text-sub);
+            border-color: var(--border-soft);
+            opacity: 0.6;
         }
 
         .btn.danger {
@@ -328,13 +306,13 @@
 
         .select-panel:hover {
             border-color: var(--accent-blue);
-            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.08);
+            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.12);
         }
 
         .panel-icon {
             width: 44px;
             height: 44px;
-            background: var(--accent-light);
+            background: rgba(59, 130, 246, 0.08);
             color: var(--accent-blue);
             border-radius: 10px;
             display: flex;
@@ -389,16 +367,17 @@
             font-weight: 600;
         }
 
+        /* 改良版トグル切り替え器（背景色調和デザイン） */
         .segmented-control {
             display: flex;
             background: var(--toggle-bg);
             padding: 3px;
             border-radius: 8px;
-            gap: 2px;
+            transition: background 0.2s ease;
         }
 
         .segment-btn {
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 0.8rem;
             font-weight: 600;
             border: none;
@@ -406,47 +385,19 @@
             color: var(--text-sub);
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.2s ease;
+        }
+
+        .segment-btn:hover:not(.active) {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.4);
         }
 
         .segment-btn.active {
-            background: #fff;
+            background: var(--bg-panel);
             color: var(--text-main);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
-
-        /* テーマ選択ドットボタン */
-        .theme-control {
-            display: flex;
-            gap: 8px;
-            background: var(--toggle-bg);
-            padding: 4px;
-            border-radius: 8px;
-        }
-
-        .theme-btn {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: transform 0.15s ease, border-color 0.15s ease;
-        }
-
-        .theme-btn:hover {
-            transform: scale(1.1);
-        }
-
-        .theme-btn.active {
-            border-color: var(--text-main);
-            transform: scale(1.1);
-        }
-
-        .theme-btn[data-theme-val="default"] { background-color: #3b82f6; }
-        .theme-btn[data-theme-val="emerald"] { background-color: #10b981; }
-        .theme-btn[data-theme-val="violet"] { background-color: #8b5cf6; }
-        .theme-btn[data-theme-val="rose"] { background-color: #f43f5e; }
-        .theme-btn[data-theme-val="amber"] { background-color: #d97706; }
 
         /* フォーム */
         .form-group {
@@ -476,14 +427,15 @@
 
         .form-input:focus {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px var(--accent-light);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
         }
 
         .form-input:disabled {
-            background-color: #e2e8f0;
-            color: #94a3b8;
+            background-color: var(--toggle-bg);
+            color: var(--text-sub);
             cursor: not-allowed;
             border-color: var(--border-soft);
+            opacity: 0.7;
         }
 
         /* ディスプレイエリア */
@@ -695,7 +647,7 @@
         }
 
         .custom-dialog-box {
-            background: #ffffff;
+            background: var(--bg-panel);
             width: 90%;
             max-width: 420px;
             border-radius: 16px;
@@ -826,16 +778,6 @@
 
         <div class="settings-box" id="admin-settings-area">
             <div class="setting-row">
-                <div class="setting-label">カラーテーマ設定</div>
-                <div class="theme-control">
-                    <button class="theme-btn active" data-theme-val="default" onclick="changeStateSetting('theme', 'default')" title="ブルー"></button>
-                    <button class="theme-btn" data-theme-val="emerald" onclick="changeStateSetting('theme', 'emerald')" title="エメラルド"></button>
-                    <button class="theme-btn" data-theme-val="violet" onclick="changeStateSetting('theme', 'violet')" title="バイオレット"></button>
-                    <button class="theme-btn" data-theme-val="rose" onclick="changeStateSetting('theme', 'rose')" title="ローズ"></button>
-                    <button class="theme-btn" data-theme-val="amber" onclick="changeStateSetting('theme', 'amber')" title="アンバー"></button>
-                </div>
-            </div>
-            <div class="setting-row">
                 <div class="setting-label">「約」の表示</div>
                 <div class="segmented-control">
                     <button class="segment-btn active" id="about-on" onclick="changeStateSetting('showAbout', true)">付ける</button>
@@ -922,7 +864,7 @@
 
         <div class="select-panel" onclick="goClientMode('display')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1 2 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">ディスプレイモードを開く</div>
@@ -1037,8 +979,7 @@
         showAbout: true,      
         showTeams: true,      
         controlMode: 'pace',
-        lockPassword: '1234',
-        theme: 'default'
+        lockPassword: '1234'
     };
 
     let currentDialogContext = null;
@@ -1711,10 +1652,6 @@
         } else if(key === 'controlMode') {
             document.getElementById('ctrl-pace').classList.toggle('active', value === 'pace');
             document.getElementById('ctrl-direct').classList.toggle('active', value === 'direct');
-        } else if(key === 'theme') {
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-theme-val') === value);
-            });
         }
         
         recalculateTotal();
@@ -1775,18 +1712,6 @@
     }
 
     function applyStateToUI() {
-        // カラーテーマのリアルタイム適用
-        if (state.theme && state.theme !== 'default') {
-            document.documentElement.setAttribute('data-theme', state.theme);
-        } else {
-            document.documentElement.removeAttribute('data-theme');
-        }
-
-        // テーマボタンのUI状態更新
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-theme-val') === (state.theme || 'default'));
-        });
-
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
             'view-time': state.totalTime, 'view-teams': state.teams,
