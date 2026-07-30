@@ -38,7 +38,7 @@
             --overlay-bg: rgba(15, 23, 42, 0.3); 
         }
 
-        /* エメラルド（グリーン） */
+        /* エメラルド */
         [data-theme="emerald"] {
             --bg-main: #f0fdf4;
             --bg-surface: #f0fdf4;
@@ -64,7 +64,7 @@
             --border-soft: rgba(59, 7, 100, 0.08);
         }
 
-        /* サンセット（オレンジ） */
+        /* サンセット */
         [data-theme="sunset"] {
             --bg-main: #fff7ed;
             --bg-surface: #fff7ed;
@@ -403,6 +403,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .setting-row:last-child {
@@ -421,6 +423,7 @@
             border-radius: 8px;
             gap: 2px;
             transition: background 0.3s ease;
+            flex-wrap: wrap;
         }
 
         .segment-btn {
@@ -815,12 +818,18 @@
         <div class="settings-box" id="admin-settings-area">
             <div class="setting-row">
                 <div class="setting-label">カラーテーマ</div>
-                <div class="segmented-control">
-                    <button class="segment-btn active" id="theme-default" onclick="changeStateSetting('theme', 'default')">デフォルト</button>
-                    <button class="segment-btn" id="theme-emerald" onclick="changeStateSetting('theme', 'emerald')">エメラルド</button>
-                    <button class="segment-btn" id="theme-purple" onclick="changeStateSetting('theme', 'purple')">パープル</button>
-                    <button class="segment-btn" id="theme-sunset" onclick="changeStateSetting('theme', 'sunset')">サンセット</button>
-                    <button class="segment-btn" id="theme-dark" onclick="changeStateSetting('theme', 'dark')">ダーク</button>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <div class="segmented-control">
+                        <button class="segment-btn active" id="theme-default" onclick="changeStateSetting('theme', 'default')">デフォルト</button>
+                        <button class="segment-btn" id="theme-emerald" onclick="changeStateSetting('theme', 'emerald')">エメラルド</button>
+                        <button class="segment-btn" id="theme-purple" onclick="changeStateSetting('theme', 'purple')">パープル</button>
+                        <button class="segment-btn" id="theme-sunset" onclick="changeStateSetting('theme', 'sunset')">サンセット</button>
+                        <button class="segment-btn" id="theme-dark" onclick="changeStateSetting('theme', 'dark')">ダーク</button>
+                        <button class="segment-btn" id="theme-ai" onclick="changeStateSetting('theme', 'ai')" style="display:none;">AIテーマ</button>
+                    </div>
+                    <button class="btn sm secondary" onclick="openAiThemeModal()" style="width: auto; padding: 6px 10px; font-size: 0.78rem; gap:4px;">
+                        AI提案
+                    </button>
                 </div>
             </div>
             <div class="setting-row">
@@ -1023,7 +1032,9 @@
         showTeams: true,      
         controlMode: 'pace',
         lockPassword: '1234',
-        theme: 'default' // カラーテーマ追加
+        theme: 'default',
+        customThemeColors: null, // AI生成カラー保存用
+        aiWorkerUrl: localStorage.getItem('wait_ai_worker_url') || '' // Workers URLのキャッシュ
     };
 
     let currentDialogContext = null;
@@ -1196,6 +1207,85 @@
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
+    }
+
+    /* ---- AIテーマ生成 ダイアログ関連 ---- */
+    function openAiThemeModal() {
+        const box = document.getElementById('custom-dialog-box');
+        const savedUrl = state.aiWorkerUrl || '';
+        box.innerHTML = `
+            <div class="dialog-title">AIテーマカラー自動生成</div>
+            <div class="dialog-message">イベント概要（50文字以内）からAIが最適なカラーテーマを生成し、全端末へ反映します。</div>
+            <div class="form-group">
+                <label class="form-label">Cloudflare Worker Endpoint URL</label>
+                <input type="text" id="ai-worker-url-input" class="form-input" placeholder="https://your-worker.workers.dev" value="${savedUrl}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">開催の概要 (50文字以内)</label>
+                <input type="text" id="ai-prompt-input" class="form-input" placeholder="例: 夏の学園祭おばけ屋敷、ボタニカルカフェ" maxlength="50" autofocus autocomplete="off">
+            </div>
+            <div class="flex-row">
+                <button class="btn" id="btn-submit-ai" onclick="generateAiTheme()">
+                    <span id="ai-spinner" class="spinner" style="display:none;"></span>
+                    <span id="ai-btn-text">生成＆同期適用</span>
+                </button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+    }
+
+    async function generateAiTheme() {
+        const workerUrl = document.getElementById('ai-worker-url-input').value.trim();
+        const promptText = document.getElementById('ai-prompt-input').value.trim();
+        const spinner = document.getElementById('ai-spinner');
+        const btnText = document.getElementById('ai-btn-text');
+        const submitBtn = document.getElementById('btn-submit-ai');
+
+        if (!workerUrl) {
+            openCustomAlert("入力エラー", "Cloudflare WorkerのURLを指定してください。");
+            return;
+        }
+        if (!promptText) {
+            openCustomAlert("入力エラー", "イベントの概要を入力してください。");
+            return;
+        }
+
+        // URL保存
+        state.aiWorkerUrl = workerUrl;
+        localStorage.setItem('wait_ai_worker_url', workerUrl);
+
+        spinner.style.display = "inline-block";
+        btnText.innerText = "AI配色生成中...";
+        submitBtn.disabled = true;
+
+        try {
+            const res = await fetch(workerUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: promptText })
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const data = await res.json();
+
+            if (data.colors) {
+                state.customThemeColors = data.colors;
+                changeStateSetting('theme', 'ai');
+                closeCustomDialog();
+                openCustomAlert("AIテーマ作成完了", `AIパレット「${data.themeName || 'カスタムAI'}」を生成し、支端末へリアルタイム配信しました！`);
+            } else {
+                throw new Error("Invalid response format from Worker");
+            }
+        } catch (e) {
+            console.error(e);
+            openCustomAlert("生成エラー", `AIカラーの生成に失敗しました。\nURLまたはWorkers AIの設定をご確認ください。\n詳細: ${e.message}`);
+        } finally {
+            spinner.style.display = "none";
+            btnText.innerText = "生成＆同期適用";
+            submitBtn.disabled = false;
+        }
     }
 
     function openCustomConfirm(actionType, extraData = null) {
@@ -1672,11 +1762,13 @@
         state[key] = value;
         
         if (key === 'theme') {
-            const themes = ['default', 'emerald', 'purple', 'sunset', 'dark'];
+            const themes = ['default', 'emerald', 'purple', 'sunset', 'dark', 'ai'];
             themes.forEach(t => {
                 const btn = document.getElementById(`theme-${t}`);
                 if (btn) btn.classList.toggle('active', value === t);
             });
+            const aiBtn = document.getElementById('theme-ai');
+            if (aiBtn) aiBtn.style.display = (value === 'ai' || state.customThemeColors) ? 'inline-block' : 'none';
         } else if(key === 'showAbout') {
             document.getElementById('about-on').classList.toggle('active', value === true);
             document.getElementById('about-off').classList.toggle('active', value === false);
@@ -1746,11 +1838,29 @@
     }
 
     function applyStateToUI() {
-        // テーマ属性をルートタグにセットしてリアルタイム反映
-        if (state.theme && state.theme !== 'default') {
-            document.documentElement.setAttribute('data-theme', state.theme);
+        const root = document.documentElement;
+
+        // テーマの反映処理
+        if (state.theme === 'ai' && state.customThemeColors) {
+            root.removeAttribute('data-theme');
+            const c = state.customThemeColors;
+            root.style.setProperty('--bg-main', c.bgMain || '#f0f4f8');
+            root.style.setProperty('--bg-surface', c.bgSurface || '#f0f4f8');
+            root.style.setProperty('--bg-panel', c.bgPanel || '#ffffff');
+            root.style.setProperty('--text-main', c.textMain || '#1e293b');
+            root.style.setProperty('--text-sub', c.textSub || '#64748b');
+            root.style.setProperty('--accent-blue', c.accentBlue || '#3b82f6');
+            root.style.setProperty('--accent-hover', c.accentHover || '#2563eb');
+            root.style.setProperty('--toggle-bg', c.toggleBg || '#e2e8f0');
+            root.style.setProperty('--border-soft', c.borderSoft || 'rgba(0,0,0,0.06)');
         } else {
-            document.documentElement.removeAttribute('data-theme');
+            // カスタムCSS変数をクリアして既存のデータ属性テーマにフォールバック
+            ['--bg-main','--bg-surface','--bg-panel','--text-main','--text-sub','--accent-blue','--accent-hover','--toggle-bg','--border-soft'].forEach(p => root.style.removeProperty(p));
+            if (state.theme && state.theme !== 'default') {
+                root.setAttribute('data-theme', state.theme);
+            } else {
+                root.removeAttribute('data-theme');
+            }
         }
 
         const renderNumbers = {
