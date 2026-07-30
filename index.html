@@ -20,28 +20,75 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
+        /* テーマ定義（変数の切り替え） */
         :root {
-            /* 【テーマカラー設定エリア】
-               背景色を変える場合は --bg-main を変更し、それに伴い --toggle-bg や --border-soft も調和する色に設定できます。
-            */
-            --bg-main: #f0f4f8;          /* 全体背景（薄いブルーグレー） */
-            --bg-surface: var(--bg-main);/* コンテナ背景（全体背景と統一） */
-            --bg-panel: #ffffff;         /* 要素・カード用パネル白背景 */
-            
-            --text-main: #1e293b;        /* メイン文字色（墨色） */
-            --text-sub: #64748b;         /* サブ文字色（上品なグレー） */
-            
-            --accent-blue: #3b82f6;      /* アクセントカラー（PINコード・主要ボタン） */
+            /* デフォルト：ライトブルー */
+            --bg-main: #f0f4f8;          
+            --bg-surface: #f0f4f8;       
+            --bg-panel: #ffffff;         
+            --text-main: #1e293b;        
+            --text-sub: #64748b;         
+            --accent-blue: #3b82f6;      
             --accent-hover: #2563eb;
-            --accent-red: #ef4444;       /* 警告・切断用の赤 */
+            --accent-red: #ef4444;       
             --accent-red-hover: #dc2626;
             --success-green: #10b981;
-            
-            /* 背景色の色味に連動する要素のカラー構成 */
-            --border-soft: rgba(30, 41, 59, 0.08); /* 背景と馴染む柔らかな境界線 */
-            --toggle-bg: #e2e8f0;                  /* トグルスイッチのベース背景色 */
-            --toggle-hover: #cbd5e1;               /* トグル非選択時のホバー色 */
-            --overlay-bg: rgba(15, 23, 42, 0.35);   /* ダイアログオーバーレイ */
+            --border-soft: rgba(0, 0, 0, 0.06);
+            --toggle-bg: #e2e8f0;
+            --overlay-bg: rgba(15, 23, 42, 0.3); 
+        }
+
+        /* エメラルド（グリーン） */
+        [data-theme="emerald"] {
+            --bg-main: #f0fdf4;
+            --bg-surface: #f0fdf4;
+            --bg-panel: #ffffff;
+            --text-main: #14532d;
+            --text-sub: #4d7c0f;
+            --accent-blue: #10b981;
+            --accent-hover: #059669;
+            --toggle-bg: #dcfce7;
+            --border-soft: rgba(20, 83, 45, 0.08);
+        }
+
+        /* パープル */
+        [data-theme="purple"] {
+            --bg-main: #f5f3ff;
+            --bg-surface: #f5f3ff;
+            --bg-panel: #ffffff;
+            --text-main: #3b0764;
+            --text-sub: #6b21a8;
+            --accent-blue: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --toggle-bg: #ede9fe;
+            --border-soft: rgba(59, 7, 100, 0.08);
+        }
+
+        /* サンセット（オレンジ） */
+        [data-theme="sunset"] {
+            --bg-main: #fff7ed;
+            --bg-surface: #fff7ed;
+            --bg-panel: #ffffff;
+            --text-main: #431407;
+            --text-sub: #9a3412;
+            --accent-blue: #f97316;
+            --accent-hover: #ea580c;
+            --toggle-bg: #ffedd5;
+            --border-soft: rgba(67, 20, 7, 0.08);
+        }
+
+        /* ダークテーマ */
+        [data-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-surface: #0f172a;
+            --bg-panel: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-hover: #0284c7;
+            --toggle-bg: #334155;
+            --border-soft: rgba(255, 255, 255, 0.1);
+            --overlay-bg: rgba(0, 0, 0, 0.6);
         }
 
         * {
@@ -59,9 +106,9 @@
             justify-content: center;
             align-items: stretch;
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* 背景色を完全統一したシームレスな幅広のじか設置コンテナ */
         .app-container {
             width: 100%;
             max-width: 680px;
@@ -70,7 +117,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            transition: max-width 0.3s ease;
+            transition: max-width 0.3s ease, background 0.3s ease;
         }
 
         .app-container.fullscreen-preview {
@@ -108,7 +155,6 @@
             line-height: 1.6;
         }
 
-        /* 運営からのお知らせ用スタイル */
         .news-box {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -118,6 +164,7 @@
             margin-bottom: 24px;
             text-align: left;
             user-select: none;
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
         .news-header {
@@ -227,7 +274,6 @@
             font-weight: 700;
         }
 
-        /* 共通ボタン */
         .btn {
             width: 100%;
             padding: 14px 20px;
@@ -245,15 +291,18 @@
             gap: 8px;
         }
 
+        [data-theme="dark"] .btn {
+            color: #0f172a;
+        }
+
         .btn:hover {
             background-color: var(--accent-hover);
         }
 
         .btn:disabled {
-            background-color: var(--toggle-bg);
-            color: var(--text-sub);
+            background-color: #cbd5e1;
+            color: #94a3b8;
             cursor: not-allowed;
-            opacity: 0.7;
         }
 
         .btn.secondary {
@@ -267,15 +316,14 @@
         }
 
         .btn.secondary:disabled {
-            background-color: var(--bg-panel);
-            color: var(--text-sub);
-            border-color: var(--border-soft);
-            opacity: 0.6;
+            background-color: #f1f5f9;
+            color: #cbd5e1;
+            border-color: #e2e8f0;
         }
 
         .btn.danger {
             background-color: var(--accent-red);
-            color: #fff;
+            color: #fff !important;
         }
 
         .btn.danger:hover {
@@ -288,7 +336,6 @@
             border-radius: 8px;
         }
 
-        /* パネル選択 */
         .select-panel {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -306,13 +353,13 @@
 
         .select-panel:hover {
             border-color: var(--accent-blue);
-            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.12);
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.08);
         }
 
         .panel-icon {
             width: 44px;
             height: 44px;
-            background: rgba(59, 130, 246, 0.08);
+            background: rgba(59, 130, 246, 0.06);
             color: var(--accent-blue);
             border-radius: 10px;
             display: flex;
@@ -342,13 +389,13 @@
             color: var(--text-sub);
         }
 
-        /* 各種ボックス設定 */
         .settings-box {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 24px;
+            transition: background 0.3s ease;
         }
 
         .setting-row {
@@ -367,17 +414,17 @@
             font-weight: 600;
         }
 
-        /* 改良版トグル切り替え器（背景色調和デザイン） */
         .segmented-control {
             display: flex;
             background: var(--toggle-bg);
             padding: 3px;
             border-radius: 8px;
-            transition: background 0.2s ease;
+            gap: 2px;
+            transition: background 0.3s ease;
         }
 
         .segment-btn {
-            padding: 6px 14px;
+            padding: 6px 12px;
             font-size: 0.8rem;
             font-weight: 600;
             border: none;
@@ -385,21 +432,15 @@
             color: var(--text-sub);
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .segment-btn:hover:not(.active) {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.15s;
         }
 
         .segment-btn.active {
             background: var(--bg-panel);
             color: var(--text-main);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
 
-        /* フォーム */
         .form-group {
             margin-bottom: 18px;
             text-align: left;
@@ -427,7 +468,7 @@
 
         .form-input:focus {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
         }
 
         .form-input:disabled {
@@ -435,10 +476,8 @@
             color: var(--text-sub);
             cursor: not-allowed;
             border-color: var(--border-soft);
-            opacity: 0.7;
         }
 
-        /* ディスプレイエリア */
         .monitor-block {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -447,6 +486,7 @@
             margin: 24px 0;
             text-align: center;
             position: relative;
+            transition: background 0.3s ease;
         }
 
         .huge-time {
@@ -457,7 +497,7 @@
         }
 
         .display-mode-text {
-            color: #000000 !important;
+            color: var(--text-main) !important;
         }
 
         .side-text {
@@ -469,7 +509,7 @@
         }
 
         .display-mode-text .side-text {
-            color: #000000 !important;
+            color: var(--text-main) !important;
             font-weight: 600;
         }
 
@@ -527,7 +567,6 @@
             align-items: center;
         }
 
-        /* クライアント接続リストUI */
         .client-list-container {
             background: var(--bg-panel);
             border: 1px solid var(--border-soft);
@@ -574,7 +613,6 @@
             color: var(--text-sub);
         }
 
-        /* QRコード表示用コンテナ */
         .qr-wrapper {
             display: flex;
             justify-content: center;
@@ -585,7 +623,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* 規約＆プライバシーポリシー同意エリア用スタイル */
         .policy-agreement-box {
             margin-top: 16px;
             text-align: center;
@@ -607,7 +644,6 @@
             text-decoration: underline;
         }
 
-        /* 接続中ぐるぐる（スピナー）アニメーション */
         .spinner {
             width: 18px;
             height: 18px;
@@ -622,7 +658,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* 共通カスタムダイアログ構造（オーバーレイ） */
         .custom-dialog-overlay {
             position: fixed;
             top: 0;
@@ -648,6 +683,7 @@
 
         .custom-dialog-box {
             background: var(--bg-panel);
+            color: var(--text-main);
             width: 90%;
             max-width: 420px;
             border-radius: 16px;
@@ -656,6 +692,7 @@
             text-align: center;
             transform: scale(0.95);
             transition: transform 0.2s ease;
+            border: 1px solid var(--border-soft);
         }
 
         .custom-dialog-overlay.active .custom-dialog-box {
@@ -677,7 +714,6 @@
             word-break: break-all;
         }
 
-        /* Turnstile用のセンタリング用CSS */
         .turnstile-container {
             display: flex;
             justify-content: center;
@@ -778,6 +814,16 @@
 
         <div class="settings-box" id="admin-settings-area">
             <div class="setting-row">
+                <div class="setting-label">カラーテーマ</div>
+                <div class="segmented-control">
+                    <button class="segment-btn active" id="theme-default" onclick="changeStateSetting('theme', 'default')">デフォルト</button>
+                    <button class="segment-btn" id="theme-emerald" onclick="changeStateSetting('theme', 'emerald')">エメラルド</button>
+                    <button class="segment-btn" id="theme-purple" onclick="changeStateSetting('theme', 'purple')">パープル</button>
+                    <button class="segment-btn" id="theme-sunset" onclick="changeStateSetting('theme', 'sunset')">サンセット</button>
+                    <button class="segment-btn" id="theme-dark" onclick="changeStateSetting('theme', 'dark')">ダーク</button>
+                </div>
+            </div>
+            <div class="setting-row">
                 <div class="setting-label">「約」の表示</div>
                 <div class="segmented-control">
                     <button class="segment-btn active" id="about-on" onclick="changeStateSetting('showAbout', true)">付ける</button>
@@ -864,7 +910,7 @@
 
         <div class="select-panel" onclick="goClientMode('display')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1 2 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1 9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">ディスプレイモードを開く</div>
@@ -891,7 +937,7 @@
             <div class="huge-time display-mode-text" id="dom-client-time-box">
                 <span class="side-text" id="txt-about-view">約</span><span id="view-time">0</span><span class="side-text">分</span>
             </div>
-            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: #000000;">0</span> 組待ち</div>
+            <div class="huge-sub" style="font-size: 1.3rem;" id="box-view-teams">計 <span id="view-teams" style="font-weight: 800; color: var(--text-main);">0</span> 組待ち</div>
         </div>
         <p class="lock-text">表示ロック中</p>
         
@@ -960,15 +1006,12 @@
     let isAdminFullscreen = false;
     let clientNameCounter = 0; 
     
-    // お知らせアコーディオン管理用のフラグとデータ保持
     let isNewsAccordionOpen = false;
     let isNewsFetched = false;
     let cachedNewsData = null;
 
-    // 自動スリープ防止（Wake Lock オブジェクト）保持用
     let wakeLockObj = null;
 
-    // スパム・多重起動負荷対策システム
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
@@ -979,17 +1022,16 @@
         showAbout: true,      
         showTeams: true,      
         controlMode: 'pace',
-        lockPassword: '1234'
+        lockPassword: '1234',
+        theme: 'default' // カラーテーマ追加
     };
 
     let currentDialogContext = null;
     let currentTargetPeerId = null;
 
-    // Turnstile用の変数設定
     let turnstileWidgetId = null;
     let selectedPendingRole = null;
 
-    // URLパラメータを解析して自動ルーティング＆ID埋め込みを行う
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const joinId = urlParams.get('join_id');
@@ -997,12 +1039,10 @@
             selectedPendingRole = 'client';
             openTurnstileDialog('client', joinId);
         } else {
-            // セキュリティ：起動時に開発者ツール防御システムを始動
             startSecurityMonitor();
         }
     });
 
-    // 運営からのお知らせ アコーディオン開閉制御
     async function toggleNewsAccordion() {
         const chevron = document.getElementById('news-chevron');
         const newsBody = document.getElementById('news-body');
@@ -1013,7 +1053,6 @@
             chevron.classList.add('open');
             newsBody.classList.add('open');
 
-            // まだデータを取得していない場合は取得＆スピナー表示を実行
             if (!isNewsFetched) {
                 await fetchAndRenderNews();
             }
@@ -1023,18 +1062,15 @@
         }
     }
 
-    // news.json を非同期取得してスピナー演出付きで表示する関数
     async function fetchAndRenderNews() {
         const loadingEl = document.getElementById('news-loading');
         const emptyMsgEl = document.getElementById('news-empty-msg');
         const newsListEl = document.getElementById('news-list');
 
-        // UIをローディング状態に初期化
         loadingEl.style.display = 'flex';
         emptyMsgEl.style.display = 'none';
         newsListEl.style.display = 'none';
 
-        // フェッチ開始時刻を記録（スピナーを0.6~0.9秒見せるための最小時間保持）
         const startTime = Date.now();
 
         try {
@@ -1055,14 +1091,12 @@
             cachedNewsData = [];
         }
 
-        // 最低750ミリ秒（0.75秒）はスピナーを見せて自然な心地よい読み込み演出にする
         const elapsedTime = Date.now() - startTime;
-        const targetDelay = 750; // 0.75秒
+        const targetDelay = 750; 
         if (elapsedTime < targetDelay) {
             await new Promise(resolve => setTimeout(resolve, targetDelay - elapsedTime));
         }
 
-        // ローディング非表示
         loadingEl.style.display = 'none';
         isNewsFetched = true;
 
@@ -1078,22 +1112,19 @@
             `).join('');
             newsListEl.style.display = 'flex';
         } else {
-            // お知らせ件数が0または取得不可時
             emptyMsgEl.style.display = 'block';
         }
     }
 
-    // 誤操作による離脱・リロードの防止プロテクター
     window.addEventListener('beforeunload', (e) => {
         if (masterRole) {
-            releaseWakeLock(); // スリープ防止を安全に解除
+            releaseWakeLock(); 
             unregisterActiveAdmin();
             e.preventDefault();
             e.returnValue = '本当にページをリロードしますか？通信がすべて切断されます。';
         }
     });
 
-    // スリープ防止（Wake Lock）の制御関数
     async function toggleWakeLock(shouldLock, viewPrefix) {
         document.getElementById(`wakelock-${viewPrefix}-on`).classList.toggle('active', shouldLock);
         document.getElementById(`wakelock-${viewPrefix}-off`).classList.toggle('active', !shouldLock);
@@ -1414,7 +1445,6 @@
         openTurnstileDialog(role);
     }
 
-    // 1. 本部ホスト起動
     function initAdminPeer() {
         navigate('screen-admin');
         currentAdminId = 'wait-' + Math.floor(100000 + Math.random() * 900000);
@@ -1503,7 +1533,6 @@
         location.reload();
     }
 
-    // 2. 支端末接続
     function connectToAdmin() {
         const targetId = document.getElementById('input-peer-id').value.trim();
         const pinVal = document.getElementById('input-pin').value.trim();
@@ -1639,11 +1668,16 @@
         });
     }
 
-    // 3. 各種設定更新
     function changeStateSetting(key, value) {
         state[key] = value;
         
-        if(key === 'showAbout') {
+        if (key === 'theme') {
+            const themes = ['default', 'emerald', 'purple', 'sunset', 'dark'];
+            themes.forEach(t => {
+                const btn = document.getElementById(`theme-${t}`);
+                if (btn) btn.classList.toggle('active', value === t);
+            });
+        } else if(key === 'showAbout') {
             document.getElementById('about-on').classList.toggle('active', value === true);
             document.getElementById('about-off').classList.toggle('active', value === false);
         } else if(key === 'showTeams') {
@@ -1712,6 +1746,13 @@
     }
 
     function applyStateToUI() {
+        // テーマ属性をルートタグにセットしてリアルタイム反映
+        if (state.theme && state.theme !== 'default') {
+            document.documentElement.setAttribute('data-theme', state.theme);
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+
         const renderNumbers = {
             'admin-time': state.totalTime, 'admin-teams': state.teams,
             'view-time': state.totalTime, 'view-teams': state.teams,
@@ -1744,7 +1785,6 @@
         document.getElementById('client-direct-box').style.display = isPace ? "none" : "block";
     }
 
-    // 4. 本部フルスクリーン
     function toggleAdminPreview(forceClose = false) {
         const container = document.getElementById('main-container');
         const info = document.getElementById('admin-info');
@@ -1776,7 +1816,7 @@
             if(qrShowBtn) qrShowBtn.style.display = "none";
             btn.style.display = "none";
             monitor.style.padding = "80px 20px";
-            monitor.style.background = "#ffffff";
+            monitor.style.background = "var(--bg-panel)";
             adminTimeBox.classList.add('display-mode-text');
             document.querySelector('#admin-monitor .huge-time').style.fontSize = "6rem";
             fullscreenAction.style.display = "flex";
@@ -1798,7 +1838,6 @@
         }
     }
 
-    // 5. セキュリティ：開発者ツール検知・防御・ロックシステム
     function startSecurityMonitor() {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'F12' || 
