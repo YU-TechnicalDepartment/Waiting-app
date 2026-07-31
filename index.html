@@ -1351,20 +1351,15 @@
     /* ---- AIテーマ生成 ダイアログ関連 ---- */
     function openAiThemeModal() {
         const box = document.getElementById('custom-dialog-box');
-        const fixedUrl = state.aiWorkerUrl || FIXED_AI_WORKER_URL;
         box.innerHTML = `
             <div class="dialog-title">AIテーマカラー自動生成</div>
             <div class="dialog-message">イベント概要（50文字以内）からAIが最適なカラーテーマを生成し、全端末へ反映します。</div>
-            <div class="form-group">
-                <label class="form-label">Cloudflare Worker Endpoint（固定）</label>
-                <div style="background:var(--bg-panel); border:1px solid var(--border-soft); padding:8px 10px; border-radius:8px; color:var(--text-sub); font-size:0.85rem; word-break:break-all;">
-                    <code style="color:var(--accent-blue); font-weight:700;">${fixedUrl}</code>
-                </div>
-            </div>
+        
             <div class="form-group">
                 <label class="form-label">開催の概要 (50文字以内)</label>
                 <input type="text" id="ai-prompt-input" class="form-input" placeholder="例: 夏の学園祭おばけ屋敷、ボタニカルカフェ" maxlength="50" autofocus autocomplete="off">
             </div>
+        
             <div class="flex-row">
                 <button class="btn" id="btn-submit-ai" onclick="generateAiTheme()">
                     <span id="ai-spinner" class="spinner" style="display:none;"></span>
@@ -1380,40 +1375,36 @@
     }
 
     async function generateAiTheme() {
-        // 固定URLを使用
-        const workerUrl = state.aiWorkerUrl || FIXED_AI_WORKER_URL;
-        const promptText = document.getElementById('ai-prompt-input').value.trim();
+        const workerUrl = state.aiWorkerUrl || FIXED_AI_WORKER_URL; // 固定URLはJSで管理
+        const promptInput = document.getElementById('ai-prompt-input');
+        const promptText = promptInput ? promptInput.value.trim() : '';
         const spinner = document.getElementById('ai-spinner');
         const btnText = document.getElementById('ai-btn-text');
         const submitBtn = document.getElementById('btn-submit-ai');
-        const promptInput = document.getElementById('ai-prompt-input');
-
+    
         if (!promptText) {
             openCustomAlert("入力エラー", "イベントの概要を入力してください。");
             return;
         }
-
+    
         // 生成中は入力不可にする
         if (promptInput) promptInput.disabled = true;
-        submitBtn.disabled = true;
+        if (submitBtn) submitBtn.disabled = true;
         spinner.style.display = "inline-block";
         btnText.innerText = "AI配色生成中...";
-
+    
         try {
             const res = await fetch(workerUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: promptText })
             });
-
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
             const data = await res.json();
-
+    
             if (data.colors) {
                 state.customThemeColors = data.colors;
-                // AIテーマを選択して反映
-                setThemeSelectValue('ai', true);
+                setThemeSelectValue('ai', true); // UI側でAIテーマ選択＆反映
                 applyStateToUI();
                 closeCustomDialog();
                 openCustomAlert("AIテーマ作成完了", `AIパレット「${data.themeName || 'カスタムAI'}」を生成し、支端末へリアルタイム配信しました！`);
@@ -1422,11 +1413,11 @@
             }
         } catch (e) {
             console.error(e);
-            openCustomAlert("生成エラー", `AIカラーの生成に失敗しました。\nURLまたはWorkers AIの設定をご確認ください。\n詳細: ${e.message}`);
+            openCustomAlert("生成エラー", `AIカラーの生成に失敗しました。\n詳細: ${e.message}`);
         } finally {
-            // 生成後は入力可能に戻す（ただしダイアログは多くの場合閉じられる）
+            // 完了時に必ず入力可能状態に戻す
             if (promptInput) promptInput.disabled = false;
-            submitBtn.disabled = false;
+            if (submitBtn) submitBtn.disabled = false;
             spinner.style.display = "none";
             btnText.innerText = "生成＆同期適用";
         }
