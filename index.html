@@ -463,11 +463,13 @@
             justify-content: space-between;
             gap: 8px;
         }
-        .select-selected:after {
-            content: "";
-            border: 6px solid transparent;
-            border-top-color: var(--text-sub);
-            transform: translateY(-1px);
+        .select-chevron {
+            flex-shrink: 0;
+            color: var(--text-sub);
+            transition: transform 0.3s ease;
+        }
+        .select-chevron.open {
+            transform: rotate(180deg);
         }
         .select-items {
             position: absolute;
@@ -675,7 +677,6 @@
         }
         .qr-wrapper img {
             border: 6px solid #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .policy-agreement-box {
@@ -873,7 +874,10 @@
                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                     <!-- カスタムプルダウンに変更 -->
                     <div class="custom-select" id="theme-select" aria-haspopup="listbox" aria-expanded="false">
-                        <div class="select-selected" id="theme-selected">デフォルト</div>
+                        <div class="select-selected" id="theme-selected">
+                            <span id="theme-selected-label">デフォルト</span>
+                            <svg id="theme-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
                         <div class="select-items select-hide" id="theme-options" role="listbox" tabindex="-1">
                             <div data-value="default" class="same-as-selected">デフォルト</div>
                             <div data-value="emerald">エメラルド</div>
@@ -1157,16 +1161,20 @@
             options.classList.remove('select-hide');
             sel.setAttribute('data-open', 'true');
             sel.setAttribute('aria-expanded', 'true');
+            const chevron = document.getElementById('theme-chevron');
+            if (chevron) chevron.classList.add('open');
         }
         function closeThemeOptions() {
             options.classList.add('select-hide');
             sel.setAttribute('data-open', 'false');
             sel.setAttribute('aria-expanded', 'false');
+            const chevron = document.getElementById('theme-chevron');
+            if (chevron) chevron.classList.remove('open');
         }
     }
 
     function setThemeSelectValue(val, updateState = true) {
-        const selLabel = document.getElementById('theme-selected');
+        const selLabel = document.getElementById('theme-selected-label');
         const options = document.getElementById('theme-options');
         const optionDivs = options.querySelectorAll('div');
 
@@ -1186,9 +1194,6 @@
 
         if (updateState) {
             state.theme = val;
-            // AI提案ボタン表示制御
-            const aiBtn = document.getElementById('btn-ai-propose');
-            if (aiBtn) aiBtn.style.display = (val === 'ai' || state.customThemeColors) ? 'inline-block' : 'none';
             recalculateTotal(); // ensures UI sync & broadcast
         }
     }
@@ -1899,9 +1904,6 @@
         if (key === 'theme') {
             // カスタムセレクトの表示を更新
             setThemeSelectValue(value, false);
-            // AI提案ボタン表示制御
-            const aiBtn = document.getElementById('btn-ai-propose');
-            if (aiBtn) aiBtn.style.display = (value === 'ai' || state.customThemeColors) ? 'inline-block' : 'none';
             // Reflect selection visually by marking the selected option
             const options = document.getElementById('theme-options');
             if (options) {
