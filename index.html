@@ -1109,7 +1109,7 @@
                             <div data-value="purple">パープル</div>
                             <div data-value="sunset">サンセット</div>
                             <div data-value="dark">ダーク</div>
-                            <div data-value="ai">AIテーマ</div>
+                            <div data-value="ai">AIテーマ（ベータ）</div>
                         </div>
                     </div>
 
@@ -1409,7 +1409,7 @@
             'purple': 'パープル',
             'sunset': 'サンセット',
             'dark': 'ダーク',
-            'ai': 'AIテーマ'
+            'ai': 'AIテーマ（ベータ）'
         };
         selLabel.innerText = mapLabel[val] || val;
 
@@ -1583,17 +1583,17 @@
         const box = document.getElementById('custom-dialog-box');
         box.innerHTML = `
             <div class="dialog-title">AIテーマカラー自動生成</div>
-            <div class="dialog-message">イベント概要（50文字以内）からAIが最適なカラーテーマを生成し、全端末へ反映します。</div>
+            <div class="dialog-message">開催の概要からAIが最適なカラーテーマを生成し、全端末へ反映します。</div>
         
             <div class="form-group">
-                <label class="form-label">開催の概要 (50文字以内)</label>
-                <input type="text" id="ai-prompt-input" class="form-input" placeholder="例: 夏の学園祭おばけ屋敷、ボタニカルカフェ" maxlength="50" autofocus autocomplete="off">
+                <label class="form-label">開催の概要（50文字以内）</label>
+                <input type="text" id="ai-prompt-input" class="form-input" placeholder="開催の概要を入力..." maxlength="50" autofocus autocomplete="off">
             </div>
         
             <div class="flex-row">
                 <button class="btn" id="btn-submit-ai" onclick="generateAiTheme()">
                     <span id="ai-spinner" class="spinner" style="display:none;"></span>
-                    <span id="ai-btn-text">生成＆同期適用</span>
+                    <span id="ai-btn-text">生成</span>
                 </button>
                 <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
             </div>
@@ -1621,7 +1621,7 @@
         if (promptInput) promptInput.disabled = true;
         if (submitBtn) submitBtn.disabled = true;
         spinner.style.display = "inline-block";
-        btnText.innerText = "AI配色生成中...";
+        btnText.innerText = "生成中...";
     
         try {
             const res = await fetch(workerUrl, {
@@ -1637,7 +1637,7 @@
                 setThemeSelectValue('ai', true); // UI側でAIテーマ選択＆反映
                 applyStateToUI();
                 closeCustomDialog();
-                openCustomAlert("AIテーマ作成完了", `AIパレット「${data.themeName || 'カスタムAI'}」を生成し、支端末へリアルタイム配信しました！`);
+                openCustomAlert("AIテーマ作成完了", `AIパレット「${data.themeName || 'カスタムAI'}」を生成し、支端末へ反映しました。`);
             } else {
                 throw new Error("Invalid response format from Worker");
             }
@@ -1649,7 +1649,7 @@
             if (promptInput) promptInput.disabled = false;
             if (submitBtn) submitBtn.disabled = false;
             spinner.style.display = "none";
-            btnText.innerText = "生成＆同期適用";
+            btnText.innerText = "生成";
         }
     }
 
