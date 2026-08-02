@@ -1592,7 +1592,6 @@
         
             <div class="flex-row">
                 <button class="btn" id="btn-submit-ai" onclick="generateAiTheme()">
-                    <span id="ai-spinner" class="spinner" style="display:none;"></span>
                     <span id="ai-btn-text">生成</span>
                 </button>
                 <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
@@ -1608,7 +1607,6 @@
         const workerUrl = state.aiWorkerUrl || FIXED_AI_WORKER_URL; // 固定URLはJSで管理
         const promptInput = document.getElementById('ai-prompt-input');
         const promptText = promptInput ? promptInput.value.trim() : '';
-        const spinner = document.getElementById('ai-spinner');
         const btnText = document.getElementById('ai-btn-text');
         const submitBtn = document.getElementById('btn-submit-ai');
     
@@ -1620,7 +1618,6 @@
         // 生成中は入力不可にする
         if (promptInput) promptInput.disabled = true;
         if (submitBtn) submitBtn.disabled = true;
-        spinner.style.display = "inline-block";
         btnText.innerText = "生成中...";
     
         try {
@@ -1648,7 +1645,6 @@
             // 完了時に必ず入力可能状態に戻す
             if (promptInput) promptInput.disabled = false;
             if (submitBtn) submitBtn.disabled = false;
-            spinner.style.display = "none";
             btnText.innerText = "生成";
         }
     }
