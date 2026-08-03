@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Page Not Found - リアルタイム待ち時間管理システム</title>
+    <style>
+        :root {
+            --bg-main: #f0f4f8;          /* 爽やかな薄いブルーグレー */
+            --bg-panel: #ffffff;         /* 要素を際立たせる白背景 */
+            --text-main: #1e293b;        /* 視認性の高い墨色 */
+            --text-sub: #64748b;         /* 上品なグレー */
+            --accent-blue: #3b82f6;      /* スキッと鮮やかなブルー */
+            --accent-hover: #2563eb;
+            --border-soft: rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            text-align: center;
+        }
+
+        /* 📋 モダンパネル */
+        .error-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 18px;
+            padding: 40px 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .error-panel:hover {
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.06);
+        }
+
+        .error-code {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--accent-blue);
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        /* アイコン用スタイリング */
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background-color: var(--bg-main);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-blue);
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+            color: var(--text-main);
+        }
+
+        .description {
+            font-size: 0.88rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 28px;
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .btn:hover {
+            background-color: #e2e8f0;
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* アクセントカラーを用いたプライマリボタン */
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            border-color: transparent;
+        }
+
+        .footer-info {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="error-panel">
+        <div class="icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+        </div>
+
+        <div class="error-code">404</div>
+        <h1>ページが見つかりませんでした</h1>
+        
+        <p class="description">
+            お探しのページは削除されたか、URLが変更された可能性があります。<br>
+            一時的にアクセスできない状態になっているか、入力したアドレスをご確認ください。
+        </p>
+
+        <div class="actions">
+            <a href="/" class="btn btn-primary">トップページへ戻る</a>
+            <a href="#" onclick="history.back(); return false;" class="btn">前のページに戻る</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
