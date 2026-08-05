@@ -674,9 +674,16 @@
             display: flex;
             justify-content: center;
             margin: 20px 0;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 0 1px var(--border-soft);
         }
-        .qr-wrapper img {
-            border: 6px solid #fff;
+        .qr-wrapper img,
+        .qr-wrapper canvas,
+        .qr-wrapper table {
+            display: block;
+            background: #ffffff;
         }
 
         .policy-agreement-box {
@@ -1846,26 +1853,49 @@
         `;
         document.getElementById('custom-dialog-overlay').classList.add('active');
 
-        setTimeout(() => {
-            if (!window.turnstile) {
-                box.innerHTML += `<p style="color:var(--accent-red); font-size:0.8rem; margin-top:10px;">Turnstileスクリプトの読み込みに失敗しました。再読み込みしてください。</p>`;
-                return;
+        waitForTurnstileAndRender(role, autoJoinId);
+    }
+
+    // Turnstile スクリプト（async defer）の読み込み完了を待ってからウィジェットを描画する。
+    // スマホ回線などスクリプト読み込みに時間がかかるケースに対応するため、
+    // 一発判定ではなく 150ms 間隔で最大約15秒（100回）リトライする。
+    function waitForTurnstileAndRender(role, autoJoinId, attempt = 0) {
+        // ダイアログが既に閉じられた／別の内容に切り替わっていたら中断
+        if (!document.getElementById('cf-turnstile-element')) {
+            return;
+        }
+
+        if (window.turnstile && typeof window.turnstile.render === 'function') {
+            try {
+                turnstileWidgetId = turnstile.render('#cf-turnstile-element', {
+                    sitekey: '0x4AAAAAADx7joy7nbPtTI0d',
+                    theme: 'light',
+                    callback: function(token) {
+                        setTimeout(() => {
+                            closeCustomDialog();
+                            executeRoleTransition(role, autoJoinId);
+                        }, 1500);
+                    },
+                    'error-callback': function() {
+                        openCustomAlert("認証エラー", "セキュリティチェック中にエラーが発生しました。時間を置いて再度お試しください。");
+                    }
+                });
+            } catch (e) {
+                console.error('Turnstile render error:', e);
             }
-            
-            turnstileWidgetId = turnstile.render('#cf-turnstile-element', {
-                sitekey: '0x4AAAAAADx7joy7nbPtTI0d',
-                theme: 'light',
-                callback: function(token) {
-                    setTimeout(() => {
-                        closeCustomDialog();
-                        executeRoleTransition(role, autoJoinId);
-                    }, 1500);
-                },
-                'error-callback': function() {
-                    openCustomAlert("認証エラー", "セキュリティチェック中にエラーが発生しました。時間を置いて再度お試しください。");
-                }
-            });
-        }, 100);
+            return;
+        }
+
+        const maxAttempts = 100; // 150ms x 100 = 約15秒
+        if (attempt >= maxAttempts) {
+            const box = document.getElementById('custom-dialog-box');
+            if (box && document.getElementById('cf-turnstile-element')) {
+                box.innerHTML += `<p style="color:var(--accent-red); font-size:0.8rem; margin-top:10px;">Turnstileスクリプトの読み込みに失敗しました。通信環境をご確認の上、再読み込みしてください。</p>`;
+            }
+            return;
+        }
+
+        setTimeout(() => waitForTurnstileAndRender(role, autoJoinId, attempt + 1), 150);
     }
 
     function executeRoleTransition(role, autoJoinId = null) {
