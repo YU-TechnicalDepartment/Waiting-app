@@ -16,6 +16,9 @@
     <meta name="twitter:description" content="P2P通信を利用して、本部と複数の支端末の待ち時間をリアルタイムに同期・管理します。">
     <meta name="twitter:image" content="https://wait.3y.f5.si/ogp-image.png">
     <title>ウェイ太！ - リアルタイム待ち時間管理システム</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -98,7 +101,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-main);
             color: var(--text-main);
             min-height: 100vh;
@@ -139,12 +142,13 @@
             letter-spacing: -0.01em;
         }
 
-        .site-logo {
-            display: block;
-            width: 100%;
-            max-width: 185px;
-            height: auto;
+        .subtitle {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: -4px;
             margin-bottom: 8px;
+            letter-spacing: -0.01em;
         }
 
         h2 {
@@ -828,10 +832,6 @@
                 font-size: 1.2rem;
             }
 
-            .site-logo {
-                max-width: 220px;
-            }
-
             h2 {
                 font-size: 0.95rem;
                 margin-top: 22px;
@@ -1007,10 +1007,6 @@
                 padding: 20px 14px;
             }
 
-            .site-logo {
-                max-width: 180px;
-            }
-
             .huge-time {
                 font-size: clamp(2.1rem, 15vw, 2.8rem);
             }
@@ -1031,7 +1027,8 @@
 <div class="app-container" id="main-container">
 
     <div id="screen-gate" class="screen active">
-        <img src="logo.svg" alt="ウェイ太！ - リアルタイム待ち時間管理システム" class="site-logo">
+        <h1>ウェイ太！</h1>
+        <p class="subtitle">リアルタイム待ち時間管理システム</p>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
         <div class="select-panel" onclick="openTurnstileDialog('admin')">
@@ -1105,7 +1102,6 @@
     </div>
 
     <div id="screen-admin" class="screen">
-        <div class="status-badge"><span class="dot"></span>本部システム稼働中</div>
         <div class="header-actions">
             <button class="btn secondary sm" onclick="openQrDialog()" style="gap: 4px;">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 6h2v2h-2zm-2 2h2v2h-2zm-2-2h2v2h-2zm2 4h2v2h-2zm2-2h2v2h-2zm-4 0h2v2h-2zm4-4h2v2h-2zm-2-2h2v2h-2zm-2 2h2v2h-2z"/></svg>
@@ -1222,7 +1218,6 @@
     </div>
 
     <div id="screen-client-choices" class="screen">
-        <div class="status-badge"><span class="dot"></span>本部と同期完了</div>
         <h1>表示モードの決定</h1>
         <p class="description">設置場所に合わせてモードを選択してください。いつでもこの画面に戻れます。</p>
 
@@ -1272,10 +1267,6 @@
     </div>
 
     <div id="screen-staff" class="screen">
-        <div class="status-badge" style="color: var(--accent-blue);">
-            <span class="dot" style="background-color: var(--accent-blue);"></span>現場スタッフ操作用
-        </div>
-        
         <div class="header-actions">
             <button class="btn secondary sm" onclick="returnToChoices()">モード変更</button>
         </div>
