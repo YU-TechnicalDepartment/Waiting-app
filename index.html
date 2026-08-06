@@ -743,10 +743,15 @@
         }
 
         textarea.form-input {
-            resize: vertical;
+            resize: none;
             min-height: 100px;
             line-height: 1.5;
             font-family: inherit;
+        }
+
+        .custom-select.disabled {
+            pointer-events: none;
+            opacity: 0.55;
         }
 
         .spinner {
@@ -1359,7 +1364,7 @@
 
     // AIワーカーの固定URLをここで定義（ユーザーの指示により入力欄を廃止して固定）
     const FIXED_AI_WORKER_URL = 'https://wait-ai.yu1000-scratch.workers.dev/';
-    const CONTACT_WORKER_URL = 'https://wait-contact.yu1000-scratch.workers.dev/'; // 下記Cloudflare Workerをデプロイ後、実際のURLに置き換え
+    const CONTACT_WORKER_URL = 'https://wait-contact.yu1000-scratch.workers.dev/'; // 下記Cloudflare Workerをデプロイ後、実際のURLに置き換えてください
 
     let state = {
         teams: 0,
@@ -1836,6 +1841,14 @@
     }
 
     /* ---- 運営へのお問い合わせ ダイアログ関連 ---- */
+    const CONTACT_TYPE_LABELS = {
+        bug: 'バグ報告',
+        feature: '機能提案',
+        other: 'その他'
+    };
+
+    let contactSelectOutsideClickHandler = null;
+
     function openContactDialog() {
         currentDialogContext = 'contact';
         currentContactType = 'bug';
@@ -1851,16 +1864,22 @@
 
             <div class="form-group">
                 <label class="form-label">お問い合わせの内容</label>
-                <div class="segmented-control" id="contact-type-control">
-                    <button type="button" class="segment-btn active" data-type="bug" onclick="setContactType('bug')">バグ報告</button>
-                    <button type="button" class="segment-btn" data-type="feature" onclick="setContactType('feature')">機能提案</button>
-                    <button type="button" class="segment-btn" data-type="other" onclick="setContactType('other')">その他</button>
+                <div class="custom-select" id="contact-type-select" style="width:100%;" aria-haspopup="listbox" aria-expanded="false">
+                    <div class="select-selected" id="contact-type-selected">
+                        <span id="contact-type-selected-label">バグ報告</span>
+                        <svg id="contact-type-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="select-items select-hide" id="contact-type-options" role="listbox" tabindex="-1">
+                        <div data-value="bug" class="same-as-selected">バグ報告</div>
+                        <div data-value="feature">機能提案</div>
+                        <div data-value="other">その他</div>
+                    </div>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">メッセージ</label>
-                <textarea id="contact-message-input" class="form-input" rows="5" maxlength="500" placeholder="お問い合わせ内容をご記入ください..." autofocus oninput="updateContactCharCount()"></textarea>
+                <textarea id="contact-message-input" class="form-input" rows="5" maxlength="500" placeholder="お問い合わせ内容をご記入ください..." autofocus oninput="updateContactCharCount()" style="resize:none;"></textarea>
                 <div class="char-counter" id="contact-char-counter">0 / 500</div>
             </div>
 
@@ -1870,20 +1889,105 @@
                 <button class="btn" id="btn-submit-contact" onclick="submitContactForm()">
                     <span id="contact-btn-text">送信する</span>
                 </button>
-                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+                <button class="btn secondary" id="btn-cancel-contact" onclick="closeCustomDialog()">キャンセル</button>
             </div>
         `;
         document.getElementById('custom-dialog-overlay').classList.add('active');
+        initContactTypeSelect();
         setTimeout(() => {
             try { document.getElementById('contact-message-input').focus(); } catch(e){}
         }, 50);
     }
 
+    /* プルダウン（お問い合わせ内容）の初期化。テーマ選択プルダウンと同じ仕組みを流用 */
+    function initContactTypeSelect() {
+        const sel = document.getElementById('contact-type-select');
+        const selLabel = document.getElementById('contact-type-selected');
+        const options = document.getElementById('contact-type-options');
+        if (!sel || !selLabel || !options) return;
+        const optionDivs = options.querySelectorAll('div');
+
+        selLabel.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (sel.getAttribute('data-disabled') === 'true') return;
+            const expanded = sel.getAttribute('data-open') === 'true';
+            if (expanded) {
+                closeContactTypeOptions();
+            } else {
+                openContactTypeOptions();
+            }
+        });
+
+        optionDivs.forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                if (sel.getAttribute('data-disabled') === 'true') return;
+                const val = opt.getAttribute('data-value');
+                setContactType(val);
+                closeContactTypeOptions();
+            });
+        });
+
+        // 外クリックで閉じる（ダイアログを開くたびに前回分のリスナーは解除してから登録し直す）
+        if (contactSelectOutsideClickHandler) {
+            document.removeEventListener('click', contactSelectOutsideClickHandler);
+        }
+        contactSelectOutsideClickHandler = function(event) {
+            const selEl = document.getElementById('contact-type-select');
+            if (!selEl) return;
+            if (!selEl.contains(event.target)) {
+                closeContactTypeOptions();
+            }
+        };
+        document.addEventListener('click', contactSelectOutsideClickHandler);
+    }
+
+    function openContactTypeOptions() {
+        const sel = document.getElementById('contact-type-select');
+        const options = document.getElementById('contact-type-options');
+        const chevron = document.getElementById('contact-type-chevron');
+        if (!sel || !options) return;
+        options.classList.remove('select-hide');
+        sel.setAttribute('data-open', 'true');
+        sel.setAttribute('aria-expanded', 'true');
+        if (chevron) chevron.classList.add('open');
+    }
+
+    function closeContactTypeOptions() {
+        const sel = document.getElementById('contact-type-select');
+        const options = document.getElementById('contact-type-options');
+        const chevron = document.getElementById('contact-type-chevron');
+        if (!sel || !options) return;
+        options.classList.add('select-hide');
+        sel.setAttribute('data-open', 'false');
+        sel.setAttribute('aria-expanded', 'false');
+        if (chevron) chevron.classList.remove('open');
+    }
+
     function setContactType(type) {
         currentContactType = type;
-        document.querySelectorAll('#contact-type-control .segment-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-type') === type);
-        });
+        const selLabel = document.getElementById('contact-type-selected-label');
+        const options = document.getElementById('contact-type-options');
+        if (selLabel) selLabel.innerText = CONTACT_TYPE_LABELS[type] || type;
+        if (options) {
+            options.querySelectorAll('div').forEach(opt => {
+                opt.classList.toggle('same-as-selected', opt.getAttribute('data-value') === type);
+            });
+        }
+    }
+
+    /* 送信中はプルダウン・メッセージ入力欄ともに操作できないようにする */
+    function setContactFormDisabled(disabled) {
+        const sel = document.getElementById('contact-type-select');
+        const input = document.getElementById('contact-message-input');
+        const cancelBtn = document.getElementById('btn-cancel-contact');
+
+        if (sel) {
+            sel.setAttribute('data-disabled', disabled ? 'true' : 'false');
+            sel.classList.toggle('disabled', disabled);
+            if (disabled) closeContactTypeOptions();
+        }
+        if (input) input.disabled = disabled;
+        if (cancelBtn) cancelBtn.disabled = disabled;
     }
 
     function updateContactCharCount() {
@@ -1917,6 +2021,7 @@
 
         submitBtn.disabled = true;
         btnText.innerText = '送信中...';
+        setContactFormDisabled(true);
 
         try {
             const res = await fetch(CONTACT_WORKER_URL, {
@@ -1937,6 +2042,7 @@
         } finally {
             submitBtn.disabled = false;
             btnText.innerText = '送信する';
+            setContactFormDisabled(false);
         }
     }
 
