@@ -142,15 +142,6 @@
             letter-spacing: -0.01em;
         }
 
-        .subtitle {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-top: -4px;
-            margin-bottom: 8px;
-            letter-spacing: -0.01em;
-        }
-
         h2 {
             font-size: 1.05rem;
             font-weight: 700;
@@ -719,6 +710,45 @@
             text-decoration: underline;
         }
 
+        .contact-link-box {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .contact-link-box a {
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px dashed var(--border-soft);
+            padding-bottom: 1px;
+            transition: color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .contact-link-box a:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 0.72rem;
+            color: var(--text-sub);
+            margin-top: 6px;
+        }
+
+        .char-counter.over-limit {
+            color: var(--accent-red);
+            font-weight: 700;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.5;
+            font-family: inherit;
+        }
+
         .spinner {
             width: 18px;
             height: 18px;
@@ -1028,7 +1058,6 @@
 
     <div id="screen-gate" class="screen active">
         <h1>ウェイ太！</h1>
-        <p class="subtitle">リアルタイム待ち時間管理システム</p>
         <p class="description">リアルタイム待ち時間管理システムです。端末の役割を選択してください。</p>
         
         <div class="select-panel" onclick="openTurnstileDialog('admin')">
@@ -1077,6 +1106,10 @@
         <div class="policy-agreement-box">
             上記のボタンを押して本システムを開始することで、<br>
             <a href="terms.html" target="_blank">利用規約</a> および <a href="privacy.html" target="_blank">プライバシーポリシー</a> に同意したものとみなされます。
+        </div>
+
+        <div class="contact-link-box">
+            <a href="#contact" onclick="openContactDialog(); return false;">運営へのお問い合わせはこちら</a>
         </div>
     </div>
 
@@ -1326,6 +1359,7 @@
 
     // AIワーカーの固定URLをここで定義（ユーザーの指示により入力欄を廃止して固定）
     const FIXED_AI_WORKER_URL = 'https://wait-ai.yu1000-scratch.workers.dev/';
+    const CONTACT_WORKER_URL = 'https://wait-contact.yu1000-scratch.workers.dev/'; // 下記Cloudflare Workerをデプロイ後、実際のURLに置き換えてください
 
     let state = {
         teams: 0,
@@ -1342,6 +1376,7 @@
 
     let currentDialogContext = null;
     let currentTargetPeerId = null;
+    let currentContactType = 'bug';
 
     let turnstileWidgetId = null;
     let selectedPendingRole = null;
@@ -1359,6 +1394,22 @@
         // カスタムセレクト初期化
         initThemeSelect();
         applyStateToUI();
+
+        // URLに #contact が付いている場合は自動でお問い合わせダイアログを開く
+        if (window.location.hash === '#contact') {
+            openContactDialog();
+        }
+    });
+
+    // #contact への変化（手動でのURL書き換え・ブラウザの戻る/進む等）を検知して開閉を同期
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#contact') {
+            if (!document.getElementById('custom-dialog-overlay').classList.contains('active') || currentDialogContext !== 'contact') {
+                openContactDialog();
+            }
+        } else if (currentDialogContext === 'contact') {
+            closeCustomDialog();
+        }
     });
 
     /* ---- カスタムセレクト（テーマ）処理 ---- */
@@ -1784,12 +1835,122 @@
         }
     }
 
+    /* ---- 運営へのお問い合わせ ダイアログ関連 ---- */
+    function openContactDialog() {
+        currentDialogContext = 'contact';
+        currentContactType = 'bug';
+
+        if (window.location.hash !== '#contact') {
+            history.pushState(null, '', '#contact');
+        }
+
+        const box = document.getElementById('custom-dialog-box');
+        box.innerHTML = `
+            <div class="dialog-title">運営へのお問い合わせ</div>
+            <div class="dialog-message">内容を選択のうえ、メッセージをご記入いただき送信してください。</div>
+
+            <div class="form-group">
+                <label class="form-label">お問い合わせの内容</label>
+                <div class="segmented-control" id="contact-type-control">
+                    <button type="button" class="segment-btn active" data-type="bug" onclick="setContactType('bug')">バグ報告</button>
+                    <button type="button" class="segment-btn" data-type="feature" onclick="setContactType('feature')">機能提案</button>
+                    <button type="button" class="segment-btn" data-type="other" onclick="setContactType('other')">その他</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">メッセージ</label>
+                <textarea id="contact-message-input" class="form-input" rows="5" maxlength="500" placeholder="お問い合わせ内容をご記入ください..." autofocus oninput="updateContactCharCount()"></textarea>
+                <div class="char-counter" id="contact-char-counter">0 / 500</div>
+            </div>
+
+            <div class="dialog-message" id="contact-error-msg" style="display:none; color:var(--accent-red); margin-bottom:12px;"></div>
+
+            <div class="flex-row">
+                <button class="btn" id="btn-submit-contact" onclick="submitContactForm()">
+                    <span id="contact-btn-text">送信する</span>
+                </button>
+                <button class="btn secondary" onclick="closeCustomDialog()">キャンセル</button>
+            </div>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.add('active');
+        setTimeout(() => {
+            try { document.getElementById('contact-message-input').focus(); } catch(e){}
+        }, 50);
+    }
+
+    function setContactType(type) {
+        currentContactType = type;
+        document.querySelectorAll('#contact-type-control .segment-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+        });
+    }
+
+    function updateContactCharCount() {
+        const input = document.getElementById('contact-message-input');
+        const counter = document.getElementById('contact-char-counter');
+        if (!input || !counter) return;
+        const len = input.value.length;
+        counter.innerText = `${len} / 500`;
+        counter.classList.toggle('over-limit', len > 500);
+    }
+
+    async function submitContactForm() {
+        const input = document.getElementById('contact-message-input');
+        const message = input ? input.value.trim() : '';
+        const errorBox = document.getElementById('contact-error-msg');
+        const submitBtn = document.getElementById('btn-submit-contact');
+        const btnText = document.getElementById('contact-btn-text');
+
+        errorBox.style.display = 'none';
+
+        if (!message) {
+            errorBox.innerText = 'メッセージを入力してください。';
+            errorBox.style.display = 'block';
+            return;
+        }
+        if (message.length > 500) {
+            errorBox.innerText = 'メッセージは500文字以内で入力してください。';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        btnText.innerText = '送信中...';
+
+        try {
+            const res = await fetch(CONTACT_WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: currentContactType, message: message })
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `HTTP ${res.status}`);
+            }
+            closeCustomDialog();
+            openCustomAlert('送信完了', 'お問い合わせを受け付けました。ご連絡ありがとうございます。');
+        } catch (e) {
+            console.error(e);
+            errorBox.innerText = '送信に失敗しました。通信環境をご確認のうえ、再度お試しください。';
+            errorBox.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            btnText.innerText = '送信する';
+        }
+    }
+
     function closeCustomDialog() {
         if (turnstileWidgetId !== null) {
             try { turnstile.remove(turnstileWidgetId); } catch(e){}
             turnstileWidgetId = null;
         }
         document.getElementById('custom-dialog-overlay').classList.remove('active');
+
+        // お問い合わせダイアログを閉じた際は #contact をURLから取り除く
+        if (currentDialogContext === 'contact' && window.location.hash === '#contact') {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
     }
 
     function navigate(screenId) {
