@@ -1369,7 +1369,7 @@
 
     // AIワーカーの固定URLをここで定義（ユーザーの指示により入力欄を廃止して固定）
     const FIXED_AI_WORKER_URL = 'https://wait-ai.yu1000-scratch.workers.dev/';
-    const CONTACT_WORKER_URL = 'https://wait-contact.yu1000-scratch.workers.dev/'; // 下記Cloudflare Workerをデプロイ後、実際のURLに置き換えてください
+    const CONTACT_WORKER_URL = 'https://wait-contact.yu1000-scratch.workers.dev/'; // 下記Cloudflare Workerをデプロイ後、実際のURLに置き換え
 
     let state = {
         teams: 0,
@@ -2646,9 +2646,7 @@
         }, 1500);
 
         // 注意: `debugger;` はDevToolsが開いていると実行がそこで一時停止するため、
-        // 検知後もこのタイマーを回し続けると「一時停止→再開→再度一時停止」を繰り返し、
-        // 再読み込みボタンのクリックすら処理されなくなる（＝再読み込みが効かないように見える）。
-        // そのためアラート表示後は必ずこのタイマーを止める。
+        // アラート表示後は必ずこのタイマーを止める
         secDebuggerTimerHandle = setInterval(() => {
             if (securityAlertShown) return;
             let start = performance.now();
