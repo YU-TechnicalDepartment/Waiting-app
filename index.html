@@ -1359,6 +1359,11 @@
 
     let wakeLockObj = null;
 
+    // セキュリティ監視用（開発者ツール検知）のタイマーハンドルと表示フラグ
+    let secResizeTimerHandle = null;
+    let secDebuggerTimerHandle = null;
+    let securityAlertShown = false;
+
     const currentInstanceId = 'inst-' + Math.random().toString(36).substring(2, 9);
     const antiSpamChannel = new BroadcastChannel('wait_system_antispam_sync');
 
@@ -2632,14 +2637,20 @@
         });
 
         let threshold = 160;
-        setInterval(() => {
+        secResizeTimerHandle = setInterval(() => {
+            if (securityAlertShown) return;
             if (window.outerWidth - window.innerWidth > threshold || 
                 window.outerHeight - window.innerHeight > threshold) {
                 triggerSecurityAlert();
             }
         }, 1500);
 
-        setInterval(() => {
+        // 注意: `debugger;` はDevToolsが開いていると実行がそこで一時停止するため、
+        // 検知後もこのタイマーを回し続けると「一時停止→再開→再度一時停止」を繰り返し、
+        // 再読み込みボタンのクリックすら処理されなくなる（＝再読み込みが効かないように見える）。
+        // そのためアラート表示後は必ずこのタイマーを止める。
+        secDebuggerTimerHandle = setInterval(() => {
+            if (securityAlertShown) return;
             let start = performance.now();
             debugger;
             let end = performance.now();
@@ -2650,10 +2661,15 @@
     }
 
     function triggerSecurityAlert() {
+        if (securityAlertShown) return;
+        securityAlertShown = true;
+
+        // これ以上 `debugger;` 等の監視処理を走らせない（再読み込みボタンがブロックされるのを防ぐ）
+        if (secResizeTimerHandle) { clearInterval(secResizeTimerHandle); secResizeTimerHandle = null; }
+        if (secDebuggerTimerHandle) { clearInterval(secDebuggerTimerHandle); secDebuggerTimerHandle = null; }
+
         const overlay = document.getElementById('custom-dialog-overlay');
         const box = document.getElementById('custom-dialog-box');
-        
-        if (overlay.classList.contains('active') && document.getElementById('sec-warning-flag')) return;
 
         box.innerHTML = `
             <div id="sec-warning-flag" style="display:none;"></div>
@@ -2662,9 +2678,16 @@
                 本システムのWEB上でのコード解析はお控えいただきますよう、お願いいたします。コードはGitHubにて公開しております。<br>
                 速やかに開発者ツールを閉じ、ページを再読み込みしてください。
             </div>
-            <button class="btn danger" onclick="location.reload()">再読み込み</button>
+            <button class="btn danger" onclick="forceSecurityReload()">再読み込み</button>
         `;
         overlay.classList.add('active');
+    }
+
+    function forceSecurityReload() {
+        // 再読み込み直前にも念のためタイマーを止めてから遷移させる
+        if (secResizeTimerHandle) { clearInterval(secResizeTimerHandle); secResizeTimerHandle = null; }
+        if (secDebuggerTimerHandle) { clearInterval(secDebuggerTimerHandle); secDebuggerTimerHandle = null; }
+        location.reload();
     }
 </script>
 
