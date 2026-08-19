@@ -824,6 +824,16 @@
             word-break: break-all;
         }
 
+        .important-news-heading {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: left;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
         .turnstile-container {
             display: flex;
             justify-content: center;
@@ -2127,15 +2137,13 @@
     function showImportantNewsDialog(newsItem) {
         currentDialogContext = 'important-news';
         const box = document.getElementById('custom-dialog-box');
-        const titleHtml = escapeHtml(newsItem.title || '重要なお知らせ');
+        const headingHtml = escapeHtml(newsItem.title || '');
         // 本文は改行を反映して表示する（HTMLタグはエスケープしてから改行のみ<br>に変換）
         const bodyHtml = escapeHtml(newsItem.body || '').replace(/\n/g, '<br>');
 
         box.innerHTML = `
-            <div class="dialog-title" style="color:var(--accent-red); display:flex; align-items:center; justify-content:center; gap:6px;">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                ${titleHtml}
-            </div>
+            <div class="dialog-title" style="color:var(--accent-red);">重要なお知らせ</div>
+            ${headingHtml ? `<div class="important-news-heading">${headingHtml}</div>` : ''}
             <div class="dialog-message" style="text-align:left; line-height:1.7;">${bodyHtml}</div>
             <button class="btn" onclick="closeImportantNewsDialog('${String(newsItem.id).replace(/'/g, "\\'")}')">閉じる</button>
         `;
