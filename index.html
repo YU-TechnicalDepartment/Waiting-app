@@ -374,7 +374,7 @@
         .panel-icon svg {
             width: 22px;
             height: 22px;
-            fill: currentColor;
+            fill: none;
         }
 
         .panel-content {
@@ -1077,7 +1077,7 @@
         
         <div class="select-panel" onclick="openTurnstileDialog('admin')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">本部管理者として開始</div>
@@ -1087,7 +1087,7 @@
 
         <div class="select-panel" onclick="openTurnstileDialog('client')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">支端末として接続</div>
@@ -1098,11 +1098,11 @@
         <div id="news-container" class="news-box">
             <div class="news-header" onclick="toggleNewsAccordion()">
                 <div class="news-title-group">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
                     <span>運営からのお知らせ</span>
                 </div>
                 <svg id="news-chevron" class="news-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
+                    <path d="m6 9 6 6 6-6"></path>
                 </svg>
             </div>
 
@@ -1152,7 +1152,7 @@
     <div id="screen-admin" class="screen">
         <div class="header-actions">
             <button class="btn secondary sm" onclick="openQrDialog()" style="gap: 4px;">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 6h2v2h-2zm-2 2h2v2h-2zm-2-2h2v2h-2zm2 4h2v2h-2zm2-2h2v2h-2zm-4 0h2v2h-2zm4-4h2v2h-2zm-2-2h2v2h-2zm-2 2h2v2h-2z"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
                 接続QR表示
             </button>
             <button class="btn secondary sm" id="btn-toggle-preview" onclick="toggleAdminPreview()">客用大画面表示に切替</button>
@@ -1168,7 +1168,7 @@
                     <div class="custom-select" id="theme-select" aria-haspopup="listbox" aria-expanded="false">
                         <div class="select-selected" id="theme-selected">
                             <span id="theme-selected-label">デフォルト</span>
-                            <svg id="theme-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <svg id="theme-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
                         </div>
                         <div class="select-items select-hide" id="theme-options" role="listbox" tabindex="-1">
                             <div data-value="default" class="same-as-selected">デフォルト</div>
@@ -1271,7 +1271,7 @@
 
         <div class="select-panel" onclick="goClientMode('display')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1 9 2 2 2h5v2h8v-2h5c1.1 0 1.9-.9 1.9-2l.01-12c0-1.1-.9-2-1.9-2zm0 14H3V5h18v12z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">ディスプレイモードを開く</div>
@@ -1281,7 +1281,7 @@
 
         <div class="select-panel" onclick="goClientMode('staff')">
             <div class="panel-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
             </div>
             <div class="panel-content">
                 <div class="panel-title">スタッフ操作モードを開く</div>
@@ -1888,7 +1888,7 @@
                 <div class="custom-select" id="contact-type-select" style="width:100%;" aria-haspopup="listbox" aria-expanded="false">
                     <div class="select-selected" id="contact-type-selected">
                         <span id="contact-type-selected-label">バグ報告</span>
-                        <svg id="contact-type-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <svg id="contact-type-chevron" class="select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
                     </div>
                     <div class="select-items select-hide" id="contact-type-options" role="listbox" tabindex="-1">
                         <div data-value="bug" class="same-as-selected">バグ報告</div>
